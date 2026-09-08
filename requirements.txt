@@ -1,0 +1,16 @@
+#API
+fastapi
+unicorn[standard]
+
+#Interfaz del equipo
+streamlit
+
+#Agente/ LLM
+anthropic
+
+#Utilidades
+python-dotenv
+requests
+faker
+
+
