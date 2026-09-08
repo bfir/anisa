@@ -1,0 +1,27 @@
+# Entorno virtual
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+.pytest_cache/
+*.egg-info/
+
+# Secretos y configuración local
+.env
+*.key
+
+# Base de datos generada (se recrea con el script de datos sintéticos)
+*.db
+*.sqlite
+*.sqlite3
+
+# Editor y sistema operativo
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
