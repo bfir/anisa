@@ -21,6 +21,7 @@ def crear_tablas(cursor):
     cursor.execute("DROP TABLE IF EXISTS pacientes")
     cursor.execute("DROP TABLE IF EXISTS citas")
     cursor.execute("DROP TABLE IF EXISTS pagos")
+    cursor.execute("DROP TABLE IF EXISTS mensajes")
     cursor.execute("""
         CREATE TABLE pacientes (
             id INTEGER PRIMARY KEY,
@@ -51,6 +52,16 @@ def crear_tablas(cursor):
             importe REAL,
             estado TEXT,
             fecha_emision TEXT
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE mensajes (
+            id INTEGER PRIMARY KEY,
+            paciente_id INTEGER,
+            tipo TEXT,
+            idioma TEXT,
+            texto TEXT,
+            enviado_en TEXT
         )
     """)
 
@@ -133,12 +144,10 @@ def main():
 
     conexion.commit()
 
-    for tabla in ["pacientes", "citas", "pagos"]:
+    for tabla in ["pacientes", "citas", "pagos", "mensajes"]:
         total = cursor.execute(f"SELECT COUNT(*) FROM {tabla}").fetchone()[0]
         print(f"{tabla}: {total} filas")
 
     conexion.close()
-
-
 if __name__ == "__main__":
     main()
