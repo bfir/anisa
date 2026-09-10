@@ -27,4 +27,13 @@ class Pago(BaseModel):
     estado: str
     fecha_emision: str
     paciente_nombre: str | None = None
-    
+
+class MensajeNuevo(BaseModel):
+    paciente_id: int
+    tipo: str
+    idioma: str
+    texto: str
+
+class Mensaje(MensajeNuevo):
+    id: int
+    enviado_en: str

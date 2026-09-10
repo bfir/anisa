@@ -78,3 +78,27 @@ def pagos_pendientes():
     ).fetchall()
     conexion.close()
     return [dict(fila) for fila in filas]
+
+def registrar_mensaje(paciente_id, tipo, idioma, texto):
+    conexion = _conectar()
+    cursor= conexion.execute(
+        """INSERT INTO mensajes (paciente_id, tipo, idioma, texto, enviado_en)
+            VALUES(?, ?, ?, ?, datetime('now'))""",
+        (paciente_id, tipo, idioma, texto),
+    )
+    conexion.commit()
+    nuevo_id=cursor.lastrowid
+    fila=conexion.execute(
+        "SELECT * FROM mensajes WHERE id = ?", (nuevo_id,)
+    ).fetchone()
+    conexion.close()
+    return dict(fila)
+
+def mensajes_de_paciente(paciente_id):
+    conexion = _conectar()
+    filas = conexion.execute(
+        "SELECT * FROM mensajes WHERE paciente_id =? ORDER BY enviado_en DESC",
+        (paciente_id,),
+    ).fetchall()
+    conexion.close()
+    return [dict(fila) for fila in filas]

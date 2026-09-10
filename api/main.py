@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 
 from api import db
 
-from api.modelos import Paciente, Cita, Pago
+from api.modelos import Paciente, Cita, Pago, MensajeNuevo, Mensaje
 
 app = FastAPI(title="Anisa API")
 
@@ -29,3 +29,15 @@ def citas_proximas(dias: int= 7):
 @app.get("/pagos/pendientes", response_model=list[Pago])
 def pagos_pendientes():
     return db.pagos_pendientes()
+
+@app.post("/mensajes", response_model=Mensaje)
+def enviar_mensaje(mensaje: MensajeNuevo):
+    paciente = db.obtener_paciente(mensaje.paciente_id)
+    if paciente is None:
+        raise HTTPException(status_code=404, detail="Paciente no encontrado")
+    return db.registrar_mensaje(
+        mensaje.paciente_id, mensaje.tipo, mensaje.idioma, mensaje.texto
+    )
+@app.get("/pacientes/{paciente_id}/mensajes", response_model=list[Mensaje])
+def mensajes_de_paciente(paciente_id: int):
+    return db.mensajes_de_paciente(paciente_id)
