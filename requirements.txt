@@ -6,7 +6,7 @@ unicorn[standard]
 streamlit
 
 #Agente/ LLM
-anthropic
+groq
 
 #Utilidades
 python-dotenv
