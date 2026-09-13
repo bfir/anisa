@@ -2,7 +2,11 @@ from fastapi import FastAPI, HTTPException
 
 from api import db
 
-from api.modelos import Paciente, Cita, Pago, MensajeNuevo, Mensaje
+from api import agente
+
+
+from api.modelos import Paciente, Cita, Pago, MensajeNuevo, Mensaje, PreguntaAgente, RespuestaAgente
+
 
 app = FastAPI(title="Anisa API")
 
@@ -41,3 +45,8 @@ def enviar_mensaje(mensaje: MensajeNuevo):
 @app.get("/pacientes/{paciente_id}/mensajes", response_model=list[Mensaje])
 def mensajes_de_paciente(paciente_id: int):
     return db.mensajes_de_paciente(paciente_id)
+
+@app.post("/agente", response_model=RespuestaAgente)
+def preguntar_al_agente(cuerpo: PreguntaAgente):
+    respuesta, pasos = agente.preguntar(cuerpo.pregunta)
+    return {"respuesta": respuesta, "pasos": pasos}

@@ -37,3 +37,11 @@ class MensajeNuevo(BaseModel):
 class Mensaje(MensajeNuevo):
     id: int
     enviado_en: str
+    
+class PreguntaAgente(BaseModel):
+    pregunta: str
+
+
+class RespuestaAgente(BaseModel):
+    respuesta: str
+    pasos: list[dict]
