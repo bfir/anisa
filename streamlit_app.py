@@ -1,7 +1,16 @@
+import os
+
 import requests
 import streamlit as st
 
-API = "http://127.0.0.1:8000"
+def _url_api():
+    try:
+        return st.secrets["ANISA_API_URL"]
+    except Exception:
+        return os.environ.get("ANISA_API_URL", "http://127.0.0.1:8000")
+
+API = _url_api()
+
 
 st.set_page_config(page_title="Anisa", layout="wide")
 st.title("Anisa: atención al Paciente Internacional")
