@@ -2,6 +2,12 @@ import sqlite3
 import random
 from datetime import datetime, timedelta
 from faker import Faker
+import os
+import sqlite3
+import random
+from datetime import datetime, timedelta
+from faker import Faker
+
 
 fake = Faker("es_ES")
 Faker.seed(42)
@@ -113,6 +119,7 @@ def generar_pagos(paciente_id):
 
 
 def main():
+    os.makedirs("data", exist_ok=True)
     conexion = sqlite3.connect(RUTA_BD)
     cursor = conexion.cursor()
 
