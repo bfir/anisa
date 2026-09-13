@@ -50,3 +50,10 @@ def mensajes_de_paciente(paciente_id: int):
 def preguntar_al_agente(cuerpo: PreguntaAgente):
     respuesta, pasos = agente.preguntar(cuerpo.pregunta)
     return {"respuesta": respuesta, "pasos": pasos}
+
+@app.get("/pacientes/{paciente_id}", response_model=Paciente)
+def obtener_paciente(paciente_id: int):
+    paciente = db.obtener_paciente(paciente_id)
+    if paciente is None:
+        raise HTTPException(status_code=404, detail="Paciente no encontrado")
+    return paciente
