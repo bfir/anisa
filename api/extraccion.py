@@ -6,7 +6,8 @@ Devuelve SOLO un JSON con estas claves (usa null si el dato no aparece):
 nombre, fecha_nacimiento (formato YYYY-MM-DD), aseguradora,
 especialidad (una de: Cardiología, Traumatología, Dermatología, Oftalmología, Ginecología, Neurología),
 fecha_preferida (YYYY-MM-DD), franja_preferida (mañana/tarde/cualquiera),
-idioma, motivo_administrativo, urgencia_detectada (true/false).
+idioma, motivo_administrativo, urgencia_detectada (true/false) categoria (una de: administrative, clinical_advice, urgent, out_of_scope — administrative si es sobre citas, pagos o datos; clinical_advice si pide diagnóstico o medicación; urgent si describe síntomas graves; out_of_scope si no tiene que ver con esto),
+.
 
 Mensaje del paciente: "{texto}" """
 

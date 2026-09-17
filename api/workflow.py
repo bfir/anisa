@@ -47,6 +47,12 @@ def procesar_turno(state: ConversationState, texto_usuario: str, cliente, modelo
 
     nueva_info, errores_extraccion = extraer_solicitud_cita(cliente, modelo, texto_usuario)
     state.solicitud = _fusionar(state.solicitud, nueva_info)
+    if state.solicitud.categoria in ("clinical_advice", "urgent", "out_of_scope"):
+        state.estado = Estado.ESCALAR
+        state.razon_escalado = (
+            "urgency" if state.solicitud.categoria == "urgent" else state.solicitud.categoria
+        )
+        return state, "Esto no lo puedo gestionar yo directamente. Te paso con una persona del equipo."
 
     if state.solicitud.urgencia_detectada:
         state.estado = Estado.ESCALAR
