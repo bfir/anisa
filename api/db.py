@@ -102,3 +102,12 @@ def mensajes_de_paciente(paciente_id):
     ).fetchall()
     conexion.close()
     return [dict(fila) for fila in filas]
+
+def verificar_identidad(nombre, fecha_nacimiento):
+    conexion = _conectar()
+    fila = conexion.execute(
+        "Select id FROM pacientes WHERE nombre = ? AND fecha_nacimiento =?",
+        (nombre, str(fecha_nacimiento)),
+    ).fetchone()
+    conexion.close()
+    return fila is not None

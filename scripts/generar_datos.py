@@ -37,7 +37,8 @@ def crear_tablas(cursor):
             pasaporte TEXT,
             telefono TEXT,
             email TEXT,
-            aseguradora TEXT
+            aseguradora TEXT,
+            fecha_nacimiento TEXT
         )
     """)
     cursor.execute("""
@@ -128,11 +129,12 @@ def crear_pacientes_demo(cursor):
     for nombre, pais, idioma, fecha_nacimiento, aseguradora in demo:
         cursor.execute(
             """INSERT INTO pacientes
-            (nombre, pais, idioma, pasaporte, telefono, email, aseguradora)
-            VALUES(?,?,?,?,?,?,?)""",
+            (nombre, pais, idioma, pasaporte, telefono, email, aseguradora, fecha_nacimiento)
+            VALUES(?,?,?,?,?,?,?,?)""",
         (nombre, pais, idioma, "DEMO0000", "+3460000000",
-         f"{nombre.split()[0].lower()}@demo.test", aseguradora),
+         f"{nombre.split()[0].lower()}@demo.test", aseguradora, fecha_nacimiento),
     )
+        
 def main():
     os.makedirs("data", exist_ok=True)
     conexion = sqlite3.connect(RUTA_BD)

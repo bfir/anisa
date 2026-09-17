@@ -46,3 +46,30 @@ class PreguntaAgente(BaseModel):
 class RespuestaAgente(BaseModel):
     respuesta: str
     pasos: list[dict]
+
+from datetime import date
+from enum import Enum
+
+class Especialidad(str, Enum):
+    cardiologia = "Cardiología"
+    traumatologia= "Traumatología"
+    dermatologia = "Dermatología"
+    oftalmologia = "Oftalmología"
+    ginecologia = "Ginecología"
+    neurologia = "Neurología"
+
+class Franja(str, Enum):
+    manana = "mañana"
+    tarde = "tarde"
+    cualquiera = "cualquiera"
+
+class SolicitudCita(BaseModel):
+    nombre: str | None= None
+    fecha_nacimiento: date | None = None
+    aseguradora: str| None = None
+    especialidad: Especialidad | None = None
+    fecha_preferida: date | None=None
+    idioma: str | None= None
+    motivo_administrativo: str | None = None
+    urgencia_detectada: bool = False
+    
