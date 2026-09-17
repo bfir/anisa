@@ -117,13 +117,29 @@ def generar_pagos(paciente_id):
         ))
     return pagos
 
-
+def crear_pacientes_demo(cursor):
+    """Pacientes con nombre e idioma fijos, para repetir la demo siempre igual."""
+    demo = [
+        ("Fátima Al Mansouri", "Emiratos árabes Unidos", "ar", "1990-04-12", "Daman Health Insurance"),
+        ("Laura García", "España", "es", "1985-11-02", "Sanitas"),
+        ("James Cole", "Reino Unido", "en", "1978-06-30", "Bupa Global"),
+        ("Camille Dubois", "Francia", "fr", "1992-09-15", "AXA"),
+    ]
+    for nombre, pais, idioma, fecha_nacimiento, aseguradora in demo:
+        cursor.execute(
+            """INSERT INTO pacientes
+            (nombre, pais, idioma, pasaporte, telefono, email, aseguradora)
+            VALUES(?,?,?,?,?,?,?)""",
+        (nombre, pais, idioma, "DEMO0000", "+3460000000",
+         f"{nombre.split()[0].lower()}@demo.test", aseguradora),
+    )
 def main():
     os.makedirs("data", exist_ok=True)
     conexion = sqlite3.connect(RUTA_BD)
     cursor = conexion.cursor()
 
     crear_tablas(cursor)
+    crear_pacientes_demo(cursor)
 
     for _ in range(40):
         cursor.execute(
@@ -158,3 +174,4 @@ def main():
     conexion.close()
 if __name__ == "__main__":
     main()
+    

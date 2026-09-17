@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+
 class Paciente(BaseModel):
     id: int
     nombre: str
