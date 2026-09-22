@@ -16,3 +16,5 @@ faker
 smolagents
 openai
 
+sqlalchemy
+psycopg2-binary
