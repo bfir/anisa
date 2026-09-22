@@ -1,19 +1,17 @@
-import sqlite3
 import random
 from datetime import datetime, timedelta
-from faker import Faker
-import os
-import sqlite3
-import random
-from datetime import datetime, timedelta
+
 from faker import Faker
 
+from dotenv import load_dotenv
+load_dotenv()
+
+from api.database import SessionLocal
+from api.models_orm import Cita, Mensaje, Pago, Paciente
 
 fake = Faker("es_ES")
 Faker.seed(42)
 random.seed(42)
-
-RUTA_BD = "data/anisa.db"
 
 IDIOMAS = ["es", "en", "ar", "fr"]
 ESPECIALIDADES = ["Cardiología", "Traumatología", "Dermatología",
@@ -23,70 +21,38 @@ CONCEPTOS = ["Primera consulta", "Consulta de seguimiento",
              "Prueba diagnóstica", "Intervención", "Análisis clínicos"]
 
 
-def crear_tablas(cursor):
-    cursor.execute("DROP TABLE IF EXISTS pacientes")
-    cursor.execute("DROP TABLE IF EXISTS citas")
-    cursor.execute("DROP TABLE IF EXISTS pagos")
-    cursor.execute("DROP TABLE IF EXISTS mensajes")
-    cursor.execute("""
-        CREATE TABLE pacientes (
-            id INTEGER PRIMARY KEY,
-            nombre TEXT,
-            pais TEXT,
-            idioma TEXT,
-            pasaporte TEXT,
-            telefono TEXT,
-            email TEXT,
-            aseguradora TEXT,
-            fecha_nacimiento TEXT
-        )
-    """)
-    cursor.execute("""
-        CREATE TABLE citas (
-            id INTEGER PRIMARY KEY,
-            paciente_id INTEGER,
-            fecha TEXT,
-            especialidad TEXT,
-            medico TEXT,
-            estado TEXT
-        )
-    """)
-    cursor.execute("""
-        CREATE TABLE pagos (
-            id INTEGER PRIMARY KEY,
-            paciente_id INTEGER,
-            concepto TEXT,
-            importe REAL,
-            estado TEXT,
-            fecha_emision TEXT
-        )
-    """)
-    cursor.execute("""
-        CREATE TABLE mensajes (
-            id INTEGER PRIMARY KEY,
-            paciente_id INTEGER,
-            tipo TEXT,
-            idioma TEXT,
-            texto TEXT,
-            enviado_en TEXT
-        )
-    """)
+def limpiar_tablas(db):
+    """Borra todo lo que hubiera antes, para partir de cero en cada ejecución."""
+    db.query(Mensaje).delete()
+    db.query(Cita).delete()
+    db.query(Pago).delete()
+    db.query(Paciente).delete()
+    db.commit()
 
 
-def generar_paciente():
-    return (
-        fake.name(),
-        fake.country(),
-        random.choice(IDIOMAS),
-        fake.bothify("??######").upper(),
-        fake.phone_number(),
-        fake.email(),
-        random.choice(ASEGURADORAS),
-    )
+def crear_pacientes_demo(db):
+    demo = [
+        ("Fátima Al Mansouri", "Emiratos Árabes Unidos", "ar", "1990-04-12", "Daman Health Insurance"),
+        ("Laura García", "España", "es", "1985-11-02", "Sanitas"),
+        ("James Cole", "Reino Unido", "en", "1978-06-30", "Bupa Global"),
+        ("Camille Dubois", "Francia", "fr", "1992-09-15", "AXA"),
+    ]
+    for nombre, pais, idioma, fecha_nacimiento, aseguradora in demo:
+        paciente = Paciente(
+            nombre=nombre,
+            pais=pais,
+            idioma=idioma,
+            pasaporte="DEMO0000",
+            telefono="+34600000000",
+            email=f"{nombre.split()[0].lower()}@demo.test",
+            aseguradora=aseguradora,
+            fecha_nacimiento=fecha_nacimiento,
+        )
+        db.add(paciente)
+    db.commit()
 
 
-def generar_citas(paciente_id):
-    citas = []
+def crear_citas(db, paciente_id):
     for _ in range(random.randint(1, 4)):
         dias = random.randint(-30, 30)
         fecha = datetime.now() + timedelta(days=dias, hours=random.randint(0, 9))
@@ -96,84 +62,57 @@ def generar_citas(paciente_id):
             estado = "programada"
         if random.random() < 0.1:
             estado = "cancelada"
-        citas.append((
-            paciente_id,
-            fecha.strftime("%Y-%m-%d %H:%M"),
-            random.choice(ESPECIALIDADES),
-            f"Dr. {fake.last_name()}",
-            estado,
+        db.add(Cita(
+            paciente_id=paciente_id,
+            fecha=fecha.strftime("%Y-%m-%d %H:%M"),
+            especialidad=random.choice(ESPECIALIDADES),
+            medico=f"Dr. {fake.last_name()}",
+            estado=estado,
         ))
-    return citas
 
 
-def generar_pagos(paciente_id):
-    pagos = []
+def crear_pagos(db, paciente_id):
     for _ in range(random.randint(0, 3)):
-        pagos.append((
-            paciente_id,
-            random.choice(CONCEPTOS),
-            round(random.uniform(60, 3000), 2),
-            random.choice(["pendiente", "pagado"]),
-            fake.date_this_year().strftime("%Y-%m-%d"),
+        db.add(Pago(
+            paciente_id=paciente_id,
+            concepto=random.choice(CONCEPTOS),
+            importe=round(random.uniform(60, 3000), 2),
+            estado=random.choice(["pendiente", "pagado"]),
+            fecha_emision=fake.date_this_year().strftime("%Y-%m-%d"),
         ))
-    return pagos
 
-def crear_pacientes_demo(cursor):
-    """Pacientes con nombre e idioma fijos, para repetir la demo siempre igual."""
-    demo = [
-        ("Fátima Al Mansouri", "Emiratos árabes Unidos", "ar", "1990-04-12", "Daman Health Insurance"),
-        ("Laura García", "España", "es", "1985-11-02", "Sanitas"),
-        ("James Cole", "Reino Unido", "en", "1978-06-30", "Bupa Global"),
-        ("Camille Dubois", "Francia", "fr", "1992-09-15", "AXA"),
-    ]
-    for nombre, pais, idioma, fecha_nacimiento, aseguradora in demo:
-        cursor.execute(
-            """INSERT INTO pacientes
-            (nombre, pais, idioma, pasaporte, telefono, email, aseguradora, fecha_nacimiento)
-            VALUES(?,?,?,?,?,?,?,?)""",
-        (nombre, pais, idioma, "DEMO0000", "+3460000000",
-         f"{nombre.split()[0].lower()}@demo.test", aseguradora, fecha_nacimiento),
-    )
-        
+
 def main():
-    os.makedirs("data", exist_ok=True)
-    conexion = sqlite3.connect(RUTA_BD)
-    cursor = conexion.cursor()
+    db = SessionLocal()
 
-    crear_tablas(cursor)
-    crear_pacientes_demo(cursor)
+    limpiar_tablas(db)
+    crear_pacientes_demo(db)
 
     for _ in range(40):
-        cursor.execute(
-            """INSERT INTO pacientes
-               (nombre, pais, idioma, pasaporte, telefono, email, aseguradora)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            generar_paciente(),
+        paciente = Paciente(
+            nombre=fake.name(),
+            pais=fake.country(),
+            idioma=random.choice(IDIOMAS),
+            pasaporte=fake.bothify("??######").upper(),
+            telefono=fake.phone_number(),
+            email=fake.safe_email(),
+            aseguradora=random.choice(ASEGURADORAS),
+            fecha_nacimiento=fake.date_of_birth(minimum_age=18, maximum_age=85).strftime("%Y-%m-%d"),
         )
-        paciente_id = cursor.lastrowid
+        db.add(paciente)
+        db.commit()  # necesario ya, para que paciente.id exista antes de usarlo abajo
 
-        for cita in generar_citas(paciente_id):
-            cursor.execute(
-                """INSERT INTO citas
-                   (paciente_id, fecha, especialidad, medico, estado)
-                   VALUES (?, ?, ?, ?, ?)""",
-                cita,
-            )
-        for pago in generar_pagos(paciente_id):
-            cursor.execute(
-                """INSERT INTO pagos
-                   (paciente_id, concepto, importe, estado, fecha_emision)
-                   VALUES (?, ?, ?, ?, ?)""",
-                pago,
-            )
+        crear_citas(db, paciente.id)
+        crear_pagos(db, paciente.id)
 
-    conexion.commit()
+    db.commit()
 
-    for tabla in ["pacientes", "citas", "pagos", "mensajes"]:
-        total = cursor.execute(f"SELECT COUNT(*) FROM {tabla}").fetchone()[0]
-        print(f"{tabla}: {total} filas")
+    for modelo, nombre in [(Paciente, "pacientes"), (Cita, "citas"), (Pago, "pagos"), (Mensaje, "mensajes")]:
+        total = db.query(modelo).count()
+        print(f"{nombre}: {total} filas")
 
-    conexion.close()
+    db.close()
+
+
 if __name__ == "__main__":
     main()
-    
