@@ -1,113 +1,127 @@
-"""Capa de acceso a datos: todas las consultas a anisa.db viven aquí.
+from datetime import datetime, timedelta
 
-La API (main.py) y, más adelante, el agente, llaman a estas funciones
-en lugar de escribir SQL por su cuenta.
-"""
-
-import sqlite3
-
-RUTA_BD = "data/anisa.db"
+from api.models_orm import Cita, Mensaje, Pago, Paciente
 
 
-def _conectar():
-    """Abre una conexión con filas accesibles por nombre de columna."""
-    conexion = sqlite3.connect(RUTA_BD)
-    conexion.row_factory = sqlite3.Row
-    return conexion
+def _paciente_a_dict(p):
+    return {
+        "id": p.id, "nombre": p.nombre, "pais": p.pais, "idioma": p.idioma,
+        "pasaporte": p.pasaporte, "telefono": p.telefono, "email": p.email,
+        "aseguradora": p.aseguradora, "fecha_nacimiento": p.fecha_nacimiento,
+    }
 
 
-def buscar_pacientes(nombre):
-    """Pacientes cuyo nombre contiene el texto dado (búsqueda parcial)."""
-    conexion = _conectar()
-    filas = conexion.execute(
-        "SELECT * FROM pacientes WHERE nombre LIKE ? ORDER BY nombre",
-        (f"%{nombre}%",),
-    ).fetchall()
-    conexion.close()
-    return [dict(fila) for fila in filas]
+def _cita_a_dict(c):
+    return {
+        "id": c.id, "paciente_id": c.paciente_id, "fecha": c.fecha,
+        "especialidad": c.especialidad, "medico": c.medico, "estado": c.estado,
+        "paciente_nombre": c.paciente.nombre if c.paciente else None,
+    }
 
 
-def obtener_paciente(paciente_id):
-    """Un paciente por su id, o None si no existe."""
-    conexion = _conectar()
-    fila = conexion.execute(
-        "SELECT * FROM pacientes WHERE id = ?",
-        (paciente_id,),
-    ).fetchone()
-    conexion.close()
-    return dict(fila) if fila else None
+def _pago_a_dict(p):
+    return {
+        "id": p.id, "paciente_id": p.paciente_id, "concepto": p.concepto,
+        "importe": p.importe, "estado": p.estado, "fecha_emision": p.fecha_emision,
+        "paciente_nombre": p.paciente.nombre if p.paciente else None,
+    }
 
 
-def citas_de_paciente(paciente_id):
-    """Todas las citas de un paciente, ordenadas por fecha."""
-    conexion = _conectar()
-    filas = conexion.execute(
-        "SELECT * FROM citas WHERE paciente_id = ? ORDER BY fecha",
-        (paciente_id,),
-    ).fetchall()
-    conexion.close()
-    return [dict(fila) for fila in filas]
+def _mensaje_a_dict(m):
+    return {
+        "id": m.id, "paciente_id": m.paciente_id, "tipo": m.tipo,
+        "idioma": m.idioma, "texto": m.texto, "enviado_en": m.enviado_en,
+    }
 
 
-def citas_proximas(dias):
-    """Citas programadas entre hoy y dentro de `dias` días."""
-    conexion = _conectar()
-    filas = conexion.execute(
-        """SELECT citas.*, pacientes.nombre AS paciente_nombre
-           FROM citas
-           JOIN pacientes ON pacientes.id = citas.paciente_id
-           WHERE citas.estado = 'programada'
-             AND citas.fecha >= datetime('now')
-             AND citas.fecha <= datetime('now', ?)
-           ORDER BY citas.fecha""",
-        (f"+{dias} days",),
-    ).fetchall()
-    conexion.close()
-    return [dict(fila) for fila in filas]
-
-
-def pagos_pendientes():
-    """Pagos sin abonar, del importe más alto al más bajo, con el nombre del paciente."""
-    conexion = _conectar()
-    filas = conexion.execute(
-        """SELECT pagos.*, pacientes.nombre AS paciente_nombre
-           FROM pagos
-           JOIN pacientes ON pacientes.id = pagos.paciente_id
-           WHERE pagos.estado = 'pendiente'
-           ORDER BY pagos.importe DESC"""
-    ).fetchall()
-    conexion.close()
-    return [dict(fila) for fila in filas]
-
-def registrar_mensaje(paciente_id, tipo, idioma, texto):
-    conexion = _conectar()
-    cursor= conexion.execute(
-        """INSERT INTO mensajes (paciente_id, tipo, idioma, texto, enviado_en)
-            VALUES(?, ?, ?, ?, datetime('now'))""",
-        (paciente_id, tipo, idioma, texto),
+def buscar_pacientes(db, nombre):
+    pacientes = (
+        db.query(Paciente)
+        .filter(Paciente.nombre.ilike(f"%{nombre}%"))
+        .order_by(Paciente.nombre)
+        .all()
     )
-    conexion.commit()
-    nuevo_id=cursor.lastrowid
-    fila=conexion.execute(
-        "SELECT * FROM mensajes WHERE id = ?", (nuevo_id,)
-    ).fetchone()
-    conexion.close()
-    return dict(fila)
+    return [_paciente_a_dict(p) for p in pacientes]
 
-def mensajes_de_paciente(paciente_id):
-    conexion = _conectar()
-    filas = conexion.execute(
-        "SELECT * FROM mensajes WHERE paciente_id =? ORDER BY enviado_en DESC",
-        (paciente_id,),
-    ).fetchall()
-    conexion.close()
-    return [dict(fila) for fila in filas]
 
-def verificar_identidad(nombre, fecha_nacimiento):
-    conexion = _conectar()
-    fila = conexion.execute(
-        "Select id FROM pacientes WHERE nombre = ? AND fecha_nacimiento =?",
-        (nombre, str(fecha_nacimiento)),
-    ).fetchone()
-    conexion.close()
-    return fila is not None
+def obtener_paciente(db, paciente_id):
+    paciente = db.query(Paciente).filter(Paciente.id == paciente_id).first()
+    return _paciente_a_dict(paciente) if paciente else None
+
+
+def citas_de_paciente(db, paciente_id):
+    citas = (
+        db.query(Cita)
+        .filter(Cita.paciente_id == paciente_id)
+        .order_by(Cita.fecha)
+        .all()
+    )
+    return [_cita_a_dict(c) for c in citas]
+
+
+def citas_proximas(db, dias):
+    ahora = datetime.now().strftime("%Y-%m-%d %H:%M")
+    limite = (datetime.now() + timedelta(days=dias)).strftime("%Y-%m-%d %H:%M")
+    citas = (
+        db.query(Cita)
+        .filter(Cita.estado == "programada")
+        .filter(Cita.fecha >= ahora)
+        .filter(Cita.fecha <= limite)
+        .order_by(Cita.fecha)
+        .all()
+    )
+    return [_cita_a_dict(c) for c in citas]
+
+
+def pagos_pendientes(db):
+    pagos = (
+        db.query(Pago)
+        .filter(Pago.estado == "pendiente")
+        .order_by(Pago.importe.desc())
+        .all()
+    )
+    return [_pago_a_dict(p) for p in pagos]
+
+
+def registrar_mensaje(db, paciente_id, tipo, idioma, texto):
+    mensaje = Mensaje(
+        paciente_id=paciente_id,
+        tipo=tipo,
+        idioma=idioma,
+        texto=texto,
+        enviado_en=datetime.now().strftime("%Y-%m-%d %H:%M"),
+    )
+    db.add(mensaje)
+    db.commit()
+    return _mensaje_a_dict(mensaje)
+
+
+def mensajes_de_paciente(db, paciente_id):
+    mensajes = (
+        db.query(Mensaje)
+        .filter(Mensaje.paciente_id == paciente_id)
+        .order_by(Mensaje.enviado_en.desc())
+        .all()
+    )
+    return [_mensaje_a_dict(m) for m in mensajes]
+
+
+def verificar_identidad(db, nombre, fecha_nacimiento):
+    paciente = (
+        db.query(Paciente)
+        .filter(Paciente.nombre == nombre)
+        .filter(Paciente.fecha_nacimiento == str(fecha_nacimiento))
+        .first()
+    )
+    return paciente is not None
+
+
+def buscar_disponibilidad(db, especialidad):
+    cita = (
+        db.query(Cita)
+        .filter(Cita.especialidad == especialidad)
+        .filter(Cita.estado == "programada")
+        .order_by(Cita.fecha)
+        .first()
+    )
+    return {"medico": cita.medico, "fecha": cita.fecha} if cita else None
