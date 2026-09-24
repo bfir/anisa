@@ -1,6 +1,6 @@
 #API
 fastapi
-unicorn[standard]
+uvicorn[standard]
 
 #Interfaz del equipo
 streamlit
