@@ -57,9 +57,10 @@ def mensajes_de_paciente(paciente_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/agente", response_model=RespuestaAgente)
-def preguntar_al_agente(cuerpo: PreguntaAgente):
-    respuesta, pasos = agente.preguntar(cuerpo.pregunta)
+def preguntar_al_agente(cuerpo: PreguntaAgente, db: Session = Depends(get_db)):
+    respuesta, pasos = agente.preguntar(cuerpo.pregunta, db)
     return {"respuesta": respuesta, "pasos": pasos}
+
 
 
 @app.get("/pacientes/{paciente_id}", response_model=Paciente)

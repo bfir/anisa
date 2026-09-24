@@ -4,21 +4,23 @@ import os
 from dotenv import load_dotenv
 from groq import Groq
 
-from api import db
+from api import db as db_module
 
 load_dotenv()
 
 cliente = Groq(api_key=os.environ["GROQ_API_KEY"])
 MODELO= "openai/gpt-oss-120b"
 
-HERRAMIENTAS_DISPONIBLES = {
-    "buscar_pacientes": lambda nombre: db.buscar_pacientes(nombre),
-    "citas_proximas": lambda dias=7, **_: db.citas_proximas(dias),
-    "pagos_pendientes": lambda **_: db.pagos_pendientes(),
-    "enviar_mensaje": lambda paciente_id, tipo, idioma, texto: db.registrar_mensaje(
-        paciente_id, tipo, idioma, texto
-    ),
-}
+def construir_herramientas(db):
+    return {
+        "buscar_pacientes": lambda nombre: db_module.buscar_pacientes(db, nombre),
+        "citas_proximas": lambda dias=7, **_: db_module.citas_proximas(db, dias),
+        "pagos_pendientes": lambda **_: db_module.pagos_pendientes(db),
+        "enviar_mensaje": lambda paciente_id, tipo, idioma, texto: db_module.registrar_mensaje(
+            db, paciente_id, tipo, idioma, texto
+        ),
+    }
+
 
 DEFINICIONES_HERRAMIENTAS = [
     {
@@ -92,8 +94,9 @@ en español, de forma breve y clara. Si envías un mensaje, redáctalo en el idi
 del paciente."""
 
 
-def preguntar(pregunta):
+def preguntar(pregunta, db):
     """Devuelve una tupla: (respuesta_final_en_texto, lista_de_pasos_dados)."""
+    herramientas_disponibles = construir_herramientas(db)
     mensajes = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": pregunta},
@@ -132,7 +135,8 @@ def preguntar(pregunta):
         for llamada in mensaje.tool_calls:
             nombre_funcion = llamada.function.name
             argumentos = json.loads(llamada.function.arguments)
-            funcion = HERRAMIENTAS_DISPONIBLES[nombre_funcion]
+            funcion = herramientas_disponibles[nombre_funcion]
+
             resultado = funcion(**argumentos)
 
             pasos.append(
