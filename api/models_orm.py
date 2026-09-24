@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float
+from sqlalchemy import Column, Integer, String, Float, ForeignKey
 from sqlalchemy.orm import relationship
 
 from api.database import Base
@@ -20,33 +20,37 @@ class Cita(Base):
     __tablename__="citas"
     
     id= Column(Integer, primary_key=True)
-    paciente_id= Column(Integer)
+    paciente_id= Column(Integer, ForeignKey("pacientes.id"))
     fecha= Column(String)
     especialidad = Column(String)
     medico= Column(String)
     estado= Column(String)
+    paciente= relationship("Paciente")
+    
 
 
 class Pago(Base):
     __tablename__="pagos"
     
     id= Column(Integer, primary_key=True)
-    paciente_id= Column(Integer)
+    paciente_id= Column(Integer, ForeignKey("pacientes.id"))
     concepto=  Column(String)
     importe= Column(Float)
     estado = Column(String)
     fecha_emision= Column(String)
+    paciente = relationship("Paciente")
     
 
 class Mensaje(Base):
     __tablename__ = "mensajes"
     
     id = Column(Integer, primary_key=True)
-    paciente_id = Column(Integer)
+    paciente_id = Column(Integer, ForeignKey("pacientes.id"))
     tipo = Column(String)
     idioma = Column(String)
     texto = Column(String)
     enviado_en = Column(String)
+    
 
 class Usuario(Base):
     __tablename__="usuarios"
