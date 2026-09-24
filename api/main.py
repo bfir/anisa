@@ -9,6 +9,10 @@ from api import agente
 from api.database import get_db
 from api.modelos import Paciente, Cita, Pago, MensajeNuevo, Mensaje, PreguntaAgente, RespuestaAgente
 
+from fastapi.security import OAuth2PasswordRequestForm
+
+from api.auth import create_access_token, get_current_user, verify_password
+from api.modelos import Token, UsuarioOut
 
 app = FastAPI(title="Anisa API")
 
@@ -69,3 +73,11 @@ def obtener_paciente(paciente_id: int, db: Session = Depends(get_db)):
     if paciente is None:
         raise HTTPException(status_code=404, detail="Paciente no encontrado")
     return paciente
+
+@app.post("/auth/login", response_model=Token)
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    usuario = db_module.obtener_usuario_por_email(db, form_data.username)
+    if usuario is None or not verify_password(form_data.password, usuario.password_hash):
+        raise HTTPException(status_code=401, detail="Email o contraseña incorrectos")
+    token = create_access_token(usuario.email)
+    return {"access_token": token, "token_type": "bearer"}

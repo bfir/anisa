@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from api.models_orm import Cita, Mensaje, Pago, Paciente
+from api.models_orm import Cita, Mensaje, Pago, Paciente, Usuario
 
 
 def _paciente_a_dict(p):
@@ -125,5 +125,6 @@ def buscar_disponibilidad(db, especialidad):
         .first()
     )
     return {"medico": cita.medico, "fecha": cita.fecha} if cita else None
+
 def obtener_usuario_por_email(db, email):
     return db.query(Usuario).filter(Usuario.email == email).first()
