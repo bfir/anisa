@@ -18,3 +18,7 @@ openai
 
 sqlalchemy
 psycopg2-binary
+
+passlib[argon2]
+pyjwt
+python-multipart

@@ -13,6 +13,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from api.auth import create_access_token, get_current_user, verify_password
 from api.modelos import Token, UsuarioOut
+from api.models_orm import Usuario
 
 app = FastAPI(title="Anisa API")
 
@@ -23,7 +24,7 @@ def raiz():
 
 
 @app.get("/pacientes/buscar", response_model=list[Paciente])
-def buscar_pacientes(nombre: str, db: Session = Depends(get_db)):
+def buscar_pacientes(nombre: str, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
     return db_module.buscar_pacientes(db, nombre)
 
 
