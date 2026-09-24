@@ -74,4 +74,15 @@ class SolicitudCita(BaseModel):
     urgencia_detectada: bool = False
     categoria: str | None = None   # "administrative", "clinical_advice", "urgent", "out_of_scope"
 
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class UsuarioOut(BaseModel):
+    id: int
+    nombre: str
+    email: str
+    rol: str
+
     

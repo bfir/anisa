@@ -125,3 +125,5 @@ def buscar_disponibilidad(db, especialidad):
         .first()
     )
     return {"medico": cita.medico, "fecha": cita.fecha} if cita else None
+def obtener_usuario_por_email(db, email):
+    return db.query(Usuario).filter(Usuario.email == email).first()

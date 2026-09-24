@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from api.database import SessionLocal
-from api.models_orm import Cita, Mensaje, Pago, Paciente
+from api.models_orm import Cita, Mensaje, Pago, Paciente, Usuario
 
 fake = Faker("es_ES")
 Faker.seed(42)
@@ -27,6 +27,8 @@ def limpiar_tablas(db):
     db.query(Cita).delete()
     db.query(Pago).delete()
     db.query(Paciente).delete()
+    db.query(Usuario).delete()
+
     db.commit()
 
 
@@ -82,11 +84,28 @@ def crear_pagos(db, paciente_id):
         ))
 
 
+def crear_usuarios_demo(db):
+    from api.auth import hash_password
+    usuarios = [
+        ("Admin", "admin@anisa.dev", "admin123", "admin"),
+        ("Coordinador", "coordinador@anisa.dev", "coord123", "coordinador"),
+    ]
+    for nombre, email, password, rol in usuarios:
+        db.add(Usuario(
+            nombre=nombre,
+            email=email,
+            password_hash=hash_password(password),
+            rol=rol,
+        ))
+    db.commit()
+
+
 def main():
     db = SessionLocal()
 
     limpiar_tablas(db)
     crear_pacientes_demo(db)
+    crear_usuarios_demo(db)
 
     for _ in range(40):
         paciente = Paciente(
@@ -107,7 +126,7 @@ def main():
 
     db.commit()
 
-    for modelo, nombre in [(Paciente, "pacientes"), (Cita, "citas"), (Pago, "pagos"), (Mensaje, "mensajes")]:
+    for modelo, nombre in [(Paciente, "pacientes"), (Cita, "citas"), (Pago, "pagos"), (Mensaje, "mensajes"), (Usuario, "usuarios")]:
         total = db.query(modelo).count()
         print(f"{nombre}: {total} filas")
 
