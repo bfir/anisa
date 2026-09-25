@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from api.models_orm import Cita, Mensaje, Pago, Paciente, Usuario
+from api.models_orm import Auditoria, Cita, Mensaje, Pago, Paciente, Usuario
 
 from api.correo import enviar_correo
 
@@ -132,6 +132,36 @@ def buscar_disponibilidad(db, especialidad):
         .first()
     )
     return {"medico": cita.medico, "fecha": cita.fecha} if cita else None
+
+def _auditoria_a_dict(a):
+    return {
+        "id": a.id,
+        "usuario_id": a.usuario_id,
+        "usuario_nombre": a.usuario.nombre if a.usuario else None,
+        "pregunta": a.pregunta,
+        "respuesta": a.respuesta,
+        "pasos": a.pasos,
+        "creado_en": a.creado_en,
+    }
+
+
+def registrar_auditoria(db, usuario_id, pregunta, respuesta, pasos):
+    registro = Auditoria(
+        usuario_id=usuario_id,
+        pregunta=pregunta,
+        respuesta=respuesta,
+        pasos=pasos,
+        creado_en=datetime.now().strftime("%Y-%m-%d %H:%M"),
+    )
+    db.add(registro)
+    db.commit()
+    return _auditoria_a_dict(registro)
+
+
+def listar_auditoria(db, limite=100):
+    registros = db.query(Auditoria).order_by(Auditoria.id.desc()).limit(limite).all()
+    return [_auditoria_a_dict(a) for a in registros]
+
 
 def obtener_usuario_por_email(db, email):
     return db.query(Usuario).filter(Usuario.email == email).first()

@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { LayoutGrid, Users, Calendar, MessageSquare, CreditCard, BarChart3, Settings, Plus, Bot } from "lucide-react";
+import { LayoutGrid, Users, Calendar, MessageSquare, CreditCard, BarChart3, Settings, Plus, Bot, ShieldCheck } from "lucide-react";
 
 const enlacesGestion = [
     { a: "/", texto: "Inicio", icono: LayoutGrid },
@@ -12,6 +12,7 @@ const enlacesGestion = [
 const enlacesAdmin = [
     { a: "/pagos", texto: "Pagos", icono: CreditCard },
     { a: "/informes", texto: "Informes", icono:BarChart3 },
+    { a: "/auditoria", texto: "Auditoría", icono: ShieldCheck },
     { a: "/ajustes", texto: "Ajustes", icono: Settings},
 ];
 

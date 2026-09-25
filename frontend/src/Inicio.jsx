@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Plus, Calendar, CalendarCheck, Users, Wallet } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Calendar, CalendarCheck, Users, Wallet } from "lucide-react";
 import { apiFetch } from "./apiClient";
 import AlertsStrip from "./AlertsStrip";
 import KpiCard from "./KpiCard";
@@ -15,6 +16,7 @@ function saludo() {
 }
 
 function Inicio() {
+  const navegar = useNavigate();
   const [usuario, setUsuario] = useState(null);
   const [citasHoy, setCitasHoy] = useState([]);
   const [citasSemana, setCitasSemana] = useState([]);
@@ -51,11 +53,17 @@ function Inicio() {
           </p>
         </div>
         <div className="flex gap-2">
-          <button className="flex items-center gap-1 px-4 py-2 rounded-lg border border-hairline bg-surface text-sm font-medium hover:bg-bg transition">
-            <Plus size={16} /> Nuevo paciente
+          <button
+            onClick={() => navegar("/pacientes")}
+            className="flex items-center gap-1 px-4 py-2 rounded-lg border border-hairline bg-surface text-sm font-medium hover:bg-bg transition"
+          >
+            <Users size={16} /> Ver pacientes
           </button>
-          <button className="flex items-center gap-1 px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:opacity-90 transition">
-            <Calendar size={16} /> Nueva cita
+          <button
+            onClick={() => navegar("/citas")}
+            className="flex items-center gap-1 px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:opacity-90 transition"
+          >
+            <Calendar size={16} /> Ver citas
           </button>
         </div>
       </div>
@@ -70,13 +78,14 @@ function Inicio() {
           delta="+2 vs ayer"
           datos={[4, 5, 4, 6, 5, 6, citasHoy.length || 1]}
         />
-        {/* Sintético fijo: la API no expone pacientes activos ni ingresos */}
+        {/* Sintético fijo: la API no expone pacientes activos ni ingresos. Marcado como "ejemplo" en la propia tarjeta, no solo aquí. */}
         <KpiCard
           icono={Users}
           etiqueta="Pacientes activos"
           valor="248"
           delta="+12 este mes"
           datos={[210, 220, 225, 230, 240, 244, 248]}
+          sintetico
         />
         <KpiCard
           icono={Wallet}
@@ -84,6 +93,7 @@ function Inicio() {
           valor="12.480 €"
           delta="+8,4%"
           datos={[8000, 9000, 9500, 10500, 11200, 12000, 12480]}
+          sintetico
         />
       </div>
 

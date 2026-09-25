@@ -6,8 +6,11 @@ from sqlalchemy.orm import Session
 
 from api import db as db_module
 from api import agente
-from api.database import get_db
-from api.modelos import Paciente, Cita, Pago, MensajeNuevo, Mensaje, PreguntaAgente, RespuestaAgente, CitaActualizar
+from api.database import Base, engine, get_db
+from api.modelos import (
+    Paciente, Cita, Pago, MensajeNuevo, Mensaje,
+    PreguntaAgente, RespuestaAgente, CitaActualizar, RegistroAuditoria,
+)
 
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -15,6 +18,9 @@ from api.auth import create_access_token, get_current_user, verify_password
 from api.modelos import Token, UsuarioOut
 from api.models_orm import Usuario
 from fastapi.middleware.cors import CORSMiddleware
+
+# Crea cualquier tabla que falte (p. ej. "auditoria") sin tocar las que ya existen.
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Anisa API")
 
@@ -72,7 +78,13 @@ def mensajes_de_paciente(paciente_id: int, db: Session = Depends(get_db), usuari
 @app.post("/agente", response_model=RespuestaAgente)
 def preguntar_al_agente(cuerpo: PreguntaAgente, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
     respuesta, pasos = agente.preguntar(cuerpo.pregunta, db)
+    db_module.registrar_auditoria(db, usuario.id, cuerpo.pregunta, respuesta, pasos)
     return {"respuesta": respuesta, "pasos": pasos}
+
+
+@app.get("/auditoria", response_model=list[RegistroAuditoria])
+def historial_auditoria(db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
+    return db_module.listar_auditoria(db)
 
 
 

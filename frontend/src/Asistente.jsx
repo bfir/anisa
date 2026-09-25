@@ -64,6 +64,7 @@ function Asistente() {
                   {turno.pasos.map((paso, j) => (
                     <li key={j}>
                       🔧 <strong>{paso.herramienta}</strong>({JSON.stringify(paso.argumentos)})
+                      {paso.error && <span className="text-red-ink"> · falló: {paso.error}</span>}
                     </li>
                   ))}
                 </ul>

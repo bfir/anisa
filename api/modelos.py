@@ -49,6 +49,16 @@ class RespuestaAgente(BaseModel):
     respuesta: str
     pasos: list[dict]
 
+
+class RegistroAuditoria(BaseModel):
+    id: int
+    usuario_id: int | None = None
+    usuario_nombre: str | None = None
+    pregunta: str
+    respuesta: str | None = None
+    pasos: list[dict]
+    creado_en: str
+
 from datetime import date
 from enum import Enum
 

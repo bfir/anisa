@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 
 from api.database import Base
@@ -60,4 +60,18 @@ class Usuario(Base):
     email= Column(String)
     password_hash= Column(String)
     rol=  Column(String)
+
+
+class Auditoria(Base):
+    """Registro permanente de cada pregunta hecha al agente: quién, qué pidió,
+    qué herramientas ejecutó y qué respondió. Es el histórico que faltaba
+    cuando 'pasos' solo viajaba en la respuesta HTTP y se perdía al cerrar el chat."""
+    __tablename__ = "auditoria"
+    id = Column(Integer, primary_key=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"))
+    pregunta = Column(String)
+    respuesta = Column(String)
+    pasos = Column(JSON)
+    creado_en = Column(String)
+    usuario = relationship("Usuario")
 

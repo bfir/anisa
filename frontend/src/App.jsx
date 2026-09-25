@@ -9,6 +9,7 @@ import Citas from "./Citas";
 import Pagos from "./Pagos";
 import Informes from "./Informes";
 import Ajustes from "./Ajustes";
+import Auditoria from "./Auditoria";
 import Layout from "./Layout";
 
 function App() {
@@ -78,6 +79,7 @@ function App() {
         <Route path="/asistente" element={<Asistente />} />
         <Route path="/pagos" element={<Pagos />} />
         <Route path="/informes" element={<Informes />} />
+        <Route path="/auditoria" element={<Auditoria />} />
         <Route path="/ajustes" element={<Ajustes />} />
       </Routes>
     </Layout>

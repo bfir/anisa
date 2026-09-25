@@ -115,6 +115,8 @@ y enviar mensajes. Usa las herramientas cuando las necesites. Responde siempre
 en español, de forma breve y clara. Si envías un mensaje, redáctalo en el idioma
 del paciente."""
 
+MAX_PASOS = 8  # evita bucles infinitos si el modelo no deja de pedir herramientas
+
 
 def preguntar(pregunta, db):
     """Devuelve una tupla: (respuesta_final_en_texto, lista_de_pasos_dados)."""
@@ -125,7 +127,7 @@ def preguntar(pregunta, db):
     ]
     pasos = []
 
-    while True:
+    for _ in range(MAX_PASOS):
         respuesta = cliente.chat.completions.create(
             model=MODELO,
             messages=mensajes,
@@ -156,16 +158,23 @@ def preguntar(pregunta, db):
 
         for llamada in mensaje.tool_calls:
             nombre_funcion = llamada.function.name
-            argumentos = json.loads(llamada.function.arguments)
-            funcion = herramientas_disponibles[nombre_funcion]
-
-            resultado = funcion(**argumentos)
+            argumentos = None
+            resultado = None
+            error = None
+            try:
+                argumentos = json.loads(llamada.function.arguments)
+                funcion = herramientas_disponibles[nombre_funcion]
+                resultado = funcion(**argumentos)
+            except Exception as excepcion:
+                db.rollback()  # deja la sesión limpia si la herramienta falló a mitad de un commit
+                error = str(excepcion)
 
             pasos.append(
                 {
                     "herramienta": nombre_funcion,
                     "argumentos": argumentos,
                     "resultado": resultado,
+                    "error": error,
                 }
             )
 
@@ -173,6 +182,14 @@ def preguntar(pregunta, db):
                 {
                     "role": "tool",
                     "tool_call_id": llamada.id,
-                    "content": json.dumps(resultado, ensure_ascii=False),
+                    "content": json.dumps(
+                        {"resultado": resultado, "error": error}, ensure_ascii=False
+                    ),
                 }
             )
+
+    return (
+        "No he podido llegar a una respuesta final tras varios pasos. "
+        "Prueba a reformular la pregunta o a dividirla en partes más pequeñas.",
+        pasos,
+    )
