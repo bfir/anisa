@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from api import db as db_module
 from api import agente
-from api.database import Base, engine, get_db
+from api.database import get_db
 from api.modelos import (
     Paciente, Cita, Pago, MensajeNuevo, Mensaje,
     PreguntaAgente, RespuestaAgente, CitaActualizar, RegistroAuditoria,
@@ -18,9 +18,6 @@ from api.auth import create_access_token, get_current_user, verify_password
 from api.modelos import Token, UsuarioOut
 from api.models_orm import Usuario
 from fastapi.middleware.cors import CORSMiddleware
-
-# Crea cualquier tabla que falte (p. ej. "auditoria") sin tocar las que ya existen.
-Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Anisa API")
 

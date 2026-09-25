@@ -17,6 +17,7 @@ smolagents
 openai
 
 sqlalchemy
+alembic
 psycopg2-binary
 
 passlib[argon2]

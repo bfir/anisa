@@ -73,7 +73,7 @@ herramienta para no romper la petición si algo falla a mitad de camino.
 | Frontend | React + Vite + React Router + Tailwind CSS v4 |
 | API | FastAPI + Pydantic |
 | Autenticación | JWT (PyJWT) + contraseñas con argon2 (passlib) |
-| Base de datos | PostgreSQL (Supabase) vía SQLAlchemy |
+| Base de datos | PostgreSQL (Supabase) vía SQLAlchemy, migraciones con Alembic |
 | Asistente | Groq (LLM) con *tool calling* escrito a mano |
 | Correo | Resend (envío real, en modo sandbox a una única bandeja de pruebas) |
 | Despliegue | Render (API) + Vercel (frontend) + Supabase (base de datos) |
@@ -99,6 +99,11 @@ RESEND_API_KEY=tu_clave
 EMAIL_DEMO_DESTINO=tu_email_de_pruebas
 ```
 
+Aplica las migraciones (crea/actualiza las tablas en tu base):
+```powershell
+alembic upgrade head
+```
+
 Genera los datos sintéticos (pacientes, citas, pagos, usuarios demo):
 ```powershell
 python -m scripts.generar_datos
@@ -109,8 +114,22 @@ Arranca la API:
 uvicorn api.main:app --reload
 ```
 
-La API estará en `http://localhost:8000/docs`. Al arrancar crea automáticamente cualquier
-tabla que falte (por ejemplo `auditoria`) sin tocar las que ya existen.
+La API estará en `http://localhost:8000/docs`.
+
+### Migraciones (Alembic)
+
+El esquema ya no se crea solo (`Base.metadata.create_all` se retiró): cualquier cambio a
+`api/models_orm.py` necesita su migración explícita.
+
+```powershell
+# después de cambiar un modelo en api/models_orm.py
+alembic revision --autogenerate -m "descripción del cambio"
+# revisa el archivo generado en alembic/versions/ antes de aplicarlo
+alembic upgrade head
+```
+
+`alembic/env.py` toma `DATABASE_URL` de `.env` — no hay ninguna contraseña en `alembic.ini` ni en
+el repo.
 
 ### Frontend
 
