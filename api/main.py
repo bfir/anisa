@@ -14,8 +14,17 @@ from fastapi.security import OAuth2PasswordRequestForm
 from api.auth import create_access_token, get_current_user, verify_password
 from api.modelos import Token, UsuarioOut
 from api.models_orm import Usuario
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Anisa API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")
@@ -29,7 +38,7 @@ def buscar_pacientes(nombre: str, db: Session = Depends(get_db), usuario: Usuari
 
 
 @app.get("/pacientes/{paciente_id}/citas", response_model=list[Cita])
-def citas_de_paciente(paciente_id: int, db: Session = Depends(get_db)):
+def citas_de_paciente(paciente_id: int, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
     paciente = db_module.obtener_paciente(db, paciente_id)
     if paciente is None:
         raise HTTPException(status_code=404, detail="Paciente no encontrado")
@@ -37,17 +46,17 @@ def citas_de_paciente(paciente_id: int, db: Session = Depends(get_db)):
 
 
 @app.get("/citas/proximas", response_model=list[Cita])
-def citas_proximas(dias: int = 7, db: Session = Depends(get_db)):
+def citas_proximas(dias: int = 7, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
     return db_module.citas_proximas(db, dias)
 
 
 @app.get("/pagos/pendientes", response_model=list[Pago])
-def pagos_pendientes(db: Session = Depends(get_db)):
+def pagos_pendientes(db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
     return db_module.pagos_pendientes(db)
 
 
 @app.post("/mensajes", response_model=Mensaje)
-def enviar_mensaje(mensaje: MensajeNuevo, db: Session = Depends(get_db)):
+def enviar_mensaje(mensaje: MensajeNuevo, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
     paciente = db_module.obtener_paciente(db, mensaje.paciente_id)
     if paciente is None:
         raise HTTPException(status_code=404, detail="Paciente no encontrado")
@@ -57,19 +66,19 @@ def enviar_mensaje(mensaje: MensajeNuevo, db: Session = Depends(get_db)):
 
 
 @app.get("/pacientes/{paciente_id}/mensajes", response_model=list[Mensaje])
-def mensajes_de_paciente(paciente_id: int, db: Session = Depends(get_db)):
+def mensajes_de_paciente(paciente_id: int, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
     return db_module.mensajes_de_paciente(db, paciente_id)
 
 
 @app.post("/agente", response_model=RespuestaAgente)
-def preguntar_al_agente(cuerpo: PreguntaAgente, db: Session = Depends(get_db)):
+def preguntar_al_agente(cuerpo: PreguntaAgente, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
     respuesta, pasos = agente.preguntar(cuerpo.pregunta, db)
     return {"respuesta": respuesta, "pasos": pasos}
 
 
 
 @app.get("/pacientes/{paciente_id}", response_model=Paciente)
-def obtener_paciente(paciente_id: int, db: Session = Depends(get_db)):
+def obtener_paciente(paciente_id: int, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
     paciente = db_module.obtener_paciente(db, paciente_id)
     if paciente is None:
         raise HTTPException(status_code=404, detail="Paciente no encontrado")
