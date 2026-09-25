@@ -26,8 +26,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-
 @app.get("/")
 def raiz():
     return {"servicio": "Anisa API", "estado": "ok"}

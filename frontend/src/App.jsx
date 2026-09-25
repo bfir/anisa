@@ -4,11 +4,12 @@ import { getToken, login, logout } from "./apiClient";
 import Inicio from "./Inicio";
 import Asistente from "./Asistente";
 import Mensajes from "./Mensajes";
+import Pacientes from "./Pacientes";
+import Citas from "./Citas";
+import Pagos from "./Pagos";
+import Informes from "./Informes";
+import Ajustes from "./Ajustes";
 import Layout from "./Layout";
-
-function PaginaProvisional({ titulo }) {
-  return <p className="text-ink-soft">Página "{titulo}" — próximamente.</p>;
-}
 
 function App() {
   const [token, setToken] = useState(getToken());
@@ -71,13 +72,13 @@ function App() {
     <Layout>
       <Routes>
         <Route path="/" element={<Inicio />} />
-        <Route path="/pacientes" element={<PaginaProvisional titulo="Pacientes" />} />
-        <Route path="/citas" element={<PaginaProvisional titulo="Citas" />} />
+        <Route path="/pacientes" element={<Pacientes />} />
+        <Route path="/citas" element={<Citas />} />
         <Route path="/mensajes" element={<Mensajes />} />
         <Route path="/asistente" element={<Asistente />} />
-        <Route path="/pagos" element={<PaginaProvisional titulo="Pagos" />} />
-        <Route path="/informes" element={<PaginaProvisional titulo="Informes" />} />
-        <Route path="/ajustes" element={<PaginaProvisional titulo="Ajustes" />} />
+        <Route path="/pagos" element={<Pagos />} />
+        <Route path="/informes" element={<Informes />} />
+        <Route path="/ajustes" element={<Ajustes />} />
       </Routes>
     </Layout>
   );
