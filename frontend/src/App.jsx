@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { Routes, Route } from "react-router-dom";
 import { getToken, login, logout } from "./apiClient";
+import Inicio from "./Inicio";
+import Asistente from "./Asistente";
+import Mensajes from "./Mensajes";
 import Layout from "./Layout";
 
 function PaginaProvisional({ titulo }) {
@@ -67,11 +70,11 @@ function App() {
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<PaginaProvisional titulo="Inicio" />} />
+        <Route path="/" element={<Inicio />} />
         <Route path="/pacientes" element={<PaginaProvisional titulo="Pacientes" />} />
         <Route path="/citas" element={<PaginaProvisional titulo="Citas" />} />
-        <Route path="/mensajes" element={<PaginaProvisional titulo="Mensajes" />} />
-        <Route path="/asistente" element={<PaginaProvisional titulo="Asistente" />} />
+        <Route path="/mensajes" element={<Mensajes />} />
+        <Route path="/asistente" element={<Asistente />} />
         <Route path="/pagos" element={<PaginaProvisional titulo="Pagos" />} />
         <Route path="/informes" element={<PaginaProvisional titulo="Informes" />} />
         <Route path="/ajustes" element={<PaginaProvisional titulo="Ajustes" />} />
