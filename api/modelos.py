@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-
+from typing import Literal
 
 class Paciente(BaseModel):
     id: int
@@ -85,4 +85,6 @@ class UsuarioOut(BaseModel):
     email: str
     rol: str
 
-    
+class CitaActualizar(BaseModel):
+    accion: Literal["reprogramar", "cancelar"]
+    nueva_fecha: str | None = None

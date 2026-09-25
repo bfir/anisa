@@ -128,3 +128,16 @@ def buscar_disponibilidad(db, especialidad):
 
 def obtener_usuario_por_email(db, email):
     return db.query(Usuario).filter(Usuario.email == email).first()
+
+def actualizar_cita(db, cita_id, accion, nueva_fecha=None):
+    cita = db.query(Cita).filter(Cita.id == cita_id).first()
+    if cita is None:
+        return None
+    if accion == "cancelar":
+        cita.estado= "cancelada"
+    elif accion == "reprogramar":
+        cita.estado= "programada"
+        if nueva_fecha:
+            cita.fecha = nueva_fecha
+    db.commit()
+    return _cita_a_dict(cita)

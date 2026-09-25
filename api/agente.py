@@ -19,6 +19,9 @@ def construir_herramientas(db):
         "enviar_mensaje": lambda paciente_id, tipo, idioma, texto: db_module.registrar_mensaje(
             db, paciente_id, tipo, idioma, texto
         ),
+        "modificar_cita": lambda cita_id, accion, nueva_fecha=None: db_module.actualizar_cita(
+            db, cita_id, accion, nueva_fecha
+        ),
     }
 
 
@@ -82,6 +85,25 @@ DEFINICIONES_HERRAMIENTAS = [
                     },
                 },
                 "required": ["paciente_id", "tipo", "idioma", "texto"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "modificar_cita",
+            "description": "Reprograma o cancela una cita existente.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "cita_id": {"type": "integer"},
+                    "accion": {"type": "string", "enum": ["reprogramar", "cancelar"]},
+                    "nueva_fecha": {
+                        "type": "string",
+                        "description": "Nueva fecha y hora (YYYY-MM-DD HH:MM), solo si accion es reprogramar",
+                    },
+                },
+                "required": ["cita_id", "accion"],
             },
         },
     },

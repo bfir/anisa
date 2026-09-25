@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from api import db as db_module
 from api import agente
 from api.database import get_db
-from api.modelos import Paciente, Cita, Pago, MensajeNuevo, Mensaje, PreguntaAgente, RespuestaAgente
+from api.modelos import Paciente, Cita, Pago, MensajeNuevo, Mensaje, PreguntaAgente, RespuestaAgente, CitaActualizar
 
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -91,3 +91,10 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         raise HTTPException(status_code=401, detail="Email o contraseña incorrectos")
     token = create_access_token(usuario.email)
     return {"access_token": token, "token_type": "bearer"}
+
+@app.patch("/citas/{cita_id}", response_model=Cita)
+def actualizar_cita(cita_id: int, cambio: CitaActualizar, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
+    cita = db_module.actualizar_cita(db, cita_id, cambio.accion, cambio.nueva_fecha)
+    if cita is None:
+        raise HTTPException(status_code=404, detail="Cita no encontrada")
+    return cita
