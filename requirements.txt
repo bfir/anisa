@@ -22,3 +22,6 @@ psycopg2-binary
 passlib[argon2]
 pyjwt
 python-multipart
+
+psycopg2-binary
+psycopg[binary]
