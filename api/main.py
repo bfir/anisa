@@ -98,3 +98,7 @@ def actualizar_cita(cita_id: int, cambio: CitaActualizar, db: Session = Depends(
     if cita is None:
         raise HTTPException(status_code=404, detail="Cita no encontrada")
     return cita
+
+@app.get("/auth/me", response_model=UsuarioOut)
+def usuario_actual(usuario: Usuario = Depends(get_current_user)):
+    return usuario

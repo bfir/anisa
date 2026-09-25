@@ -20,6 +20,10 @@ __pycache__/
 *.sqlite
 *.sqlite3
 
+# Node / React (frontend)
+frontend/node_modules/
+frontend/dist/
+
 # Editor y sistema operativo
 .vscode/
 .idea/
