@@ -43,13 +43,14 @@ class Pago(Base):
 
 class Mensaje(Base):
     __tablename__ = "mensajes"
-    
     id = Column(Integer, primary_key=True)
     paciente_id = Column(Integer, ForeignKey("pacientes.id"))
     tipo = Column(String)
     idioma = Column(String)
     texto = Column(String)
     enviado_en = Column(String)
+    estado_envio = Column(String, nullable=True)   # <- nueva
+
     
 
 class Usuario(Base):
@@ -59,4 +60,4 @@ class Usuario(Base):
     email= Column(String)
     password_hash= Column(String)
     rol=  Column(String)
-    
+

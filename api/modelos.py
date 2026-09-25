@@ -38,6 +38,8 @@ class MensajeNuevo(BaseModel):
 class Mensaje(MensajeNuevo):
     id: int
     enviado_en: str
+    estado_envio: str | None = None
+
     
 class PreguntaAgente(BaseModel):
     pregunta: str

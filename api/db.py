@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 from api.models_orm import Cita, Mensaje, Pago, Paciente, Usuario
 
+from api.correo import enviar_correo
 
 def _paciente_a_dict(p):
     return {
@@ -31,6 +32,7 @@ def _mensaje_a_dict(m):
     return {
         "id": m.id, "paciente_id": m.paciente_id, "tipo": m.tipo,
         "idioma": m.idioma, "texto": m.texto, "enviado_en": m.enviado_en,
+        "estado_envio": m.estado_envio,
     }
 
 
@@ -84,16 +86,21 @@ def pagos_pendientes(db):
 
 
 def registrar_mensaje(db, paciente_id, tipo, idioma, texto):
+    paciente = db.query(Paciente).filter(Paciente.id == paciente_id).first()
+    estado_envio = enviar_correo(paciente.email, tipo, f"<p>{texto}</p>") if paciente else "fallido"
+
     mensaje = Mensaje(
         paciente_id=paciente_id,
         tipo=tipo,
         idioma=idioma,
         texto=texto,
         enviado_en=datetime.now().strftime("%Y-%m-%d %H:%M"),
+        estado_envio=estado_envio,
     )
     db.add(mensaje)
     db.commit()
     return _mensaje_a_dict(mensaje)
+
 
 
 def mensajes_de_paciente(db, paciente_id):
