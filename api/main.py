@@ -14,7 +14,9 @@ from api.modelos import (
 
 from fastapi.security import OAuth2PasswordRequestForm
 
-from api.auth import create_access_token, get_current_user, verify_password
+from api.auth import (
+    create_access_token, get_current_user, puede_actuar, puede_auditar, verify_password,
+)
 from api.modelos import Token, UsuarioOut
 from api.models_orm import Usuario
 from fastapi.middleware.cors import CORSMiddleware
@@ -61,13 +63,13 @@ def pagos_pendientes(db: Session = Depends(get_db), usuario: Usuario = Depends(g
 
 
 @app.post("/mensajes", response_model=Mensaje)
-def enviar_mensaje(mensaje: MensajeNuevo, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
-    paciente = db_module.obtener_paciente(db, mensaje.paciente_id)
-    if paciente is None:
+def enviar_mensaje(mensaje: MensajeNuevo, db: Session = Depends(get_db), usuario: Usuario = Depends(puede_actuar)):
+    try:
+        return db_module.registrar_mensaje(
+            db, mensaje.paciente_id, mensaje.tipo, mensaje.idioma, mensaje.texto
+        )
+    except db_module.PacienteNoEncontrado:
         raise HTTPException(status_code=404, detail="Paciente no encontrado")
-    return db_module.registrar_mensaje(
-        db, mensaje.paciente_id, mensaje.tipo, mensaje.idioma, mensaje.texto
-    )
 
 
 @app.get("/pacientes/{paciente_id}/mensajes", response_model=list[Mensaje])
@@ -76,14 +78,14 @@ def mensajes_de_paciente(paciente_id: int, db: Session = Depends(get_db), usuari
 
 
 @app.post("/agente", response_model=RespuestaAgente)
-def preguntar_al_agente(cuerpo: PreguntaAgente, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
+def preguntar_al_agente(cuerpo: PreguntaAgente, db: Session = Depends(get_db), usuario: Usuario = Depends(puede_actuar)):
     respuesta, pasos = agente.preguntar(cuerpo.pregunta, db)
     db_module.registrar_auditoria(db, usuario.id, cuerpo.pregunta, respuesta, pasos)
     return {"respuesta": respuesta, "pasos": pasos}
 
 
 @app.get("/auditoria", response_model=list[RegistroAuditoria])
-def historial_auditoria(db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
+def historial_auditoria(db: Session = Depends(get_db), usuario: Usuario = Depends(puede_auditar)):
     return db_module.listar_auditoria(db)
 
 
@@ -104,7 +106,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     return {"access_token": token, "token_type": "bearer"}
 
 @app.patch("/citas/{cita_id}", response_model=Cita)
-def actualizar_cita(cita_id: int, cambio: CitaActualizar, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
+def actualizar_cita(cita_id: int, cambio: CitaActualizar, db: Session = Depends(get_db), usuario: Usuario = Depends(puede_actuar)):
     cita = db_module.actualizar_cita(db, cita_id, cambio.accion, cambio.nueva_fecha)
     if cita is None:
         raise HTTPException(status_code=404, detail="Cita no encontrada")

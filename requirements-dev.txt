@@ -1,0 +1,5 @@
+# Dependencias solo para los scripts de scripts/, no para producción.
+-r requirements.txt
+
+faker==40.39.0
+smolagents[openai]==1.26.0

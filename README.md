@@ -20,6 +20,9 @@ detectar pagos pendientes y preparar y enviar recordatorios en el idioma de cada
 
 Credenciales de prueba: `admin@anisa.dev` / `admin123` (o `coordinador@anisa.dev` / `coord123`).
 
+Ambos roles pueden usar el asistente, enviar mensajes y modificar citas; el registro de
+auditoría es exclusivo de `admin`.
+
 ---
 
 ## El problema
@@ -99,8 +102,10 @@ RESEND_API_KEY=tu_clave
 EMAIL_DEMO_DESTINO=tu_email_de_pruebas
 ```
 
-Genera los datos sintéticos (pacientes, citas, pagos, usuarios demo):
+Genera los datos sintéticos (pacientes, citas, pagos, usuarios demo). Los scripts de
+`scripts/` necesitan además las dependencias de desarrollo:
 ```powershell
+pip install -r requirements-dev.txt
 python -m scripts.generar_datos
 ```
 

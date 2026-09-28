@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { useUsuario } from "./usuarioContext";
 import { LayoutGrid, Users, Calendar, MessageSquare, CreditCard, BarChart3, Settings, Plus, Bot, ShieldCheck } from "lucide-react";
 
 const enlacesGestion = [
@@ -12,7 +13,7 @@ const enlacesGestion = [
 const enlacesAdmin = [
     { a: "/pagos", texto: "Pagos", icono: CreditCard },
     { a: "/informes", texto: "Informes", icono:BarChart3 },
-    { a: "/auditoria", texto: "Auditoría", icono: ShieldCheck },
+    { a: "/auditoria", texto: "Auditoría", icono: ShieldCheck, soloRol: "admin" },
     { a: "/ajustes", texto: "Ajustes", icono: Settings},
 ];
 
@@ -35,6 +36,11 @@ function ItemNav({ a, texto, icono: Icono}) {
 }
 
 function Sidebar() {
+    const usuario = useUsuario();
+    const enlacesVisibles = enlacesAdmin.filter(
+        (item) => !item.soloRol || item.soloRol === usuario?.rol
+    );
+
     return (
         <aside className="w-[220px] shrink-0 bg-bg border-r border-hairline flex flex-col p-4">
             <div className="flex items-center gap-2 px-1 mb-8">
@@ -56,13 +62,14 @@ function Sidebar() {
 
             <p className="text-[11px] font-semibold tracking-widest text-ink-soft/70 px-3 mb-2">ADMINISTRACIÓN</p>
             <nav className="flex flex-col gap-1">
-                {enlacesAdmin.map((item) => (
+                {enlacesVisibles.map((item) => (
                     <ItemNav key={item.a} {...item} />
                 ))}
             </nav>
 
-            <div className="min-w-0">
-                <p className="text-sm font-medium truncate">Administrador</p>
+            <div className="min-w-0 mt-auto pt-6">
+                <p className="text-sm font-medium truncate">{usuario?.nombre || "..."}</p>
+                <p className="text-xs text-ink-soft capitalize truncate">{usuario?.rol}</p>
             </div>
         </aside>   
     );

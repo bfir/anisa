@@ -1,29 +1,19 @@
-#API
-fastapi
-uvicorn[standard]
+# API
+fastapi==0.141.1
+uvicorn[standard]==0.53.0
+python-multipart==0.0.32
 
-#Interfaz del equipo
-streamlit
+# Agente / LLM
+groq==1.7.0
 
-#Agente/ LLM
-groq
+# Base de datos
+sqlalchemy==2.0.54
+psycopg2-binary==2.9.13
 
-#Utilidades
-python-dotenv
-requests
-faker
+# Autenticación
+passlib[argon2]==1.7.4
+pyjwt==2.14.0
 
-smolagents
-openai
-
-sqlalchemy
-psycopg2-binary
-
-passlib[argon2]
-pyjwt
-python-multipart
-
-psycopg2-binary
-psycopg[binary]
-
-resend
+# Utilidades
+python-dotenv==1.2.3
+resend==2.47.0

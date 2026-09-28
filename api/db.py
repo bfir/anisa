@@ -4,6 +4,11 @@ from api.models_orm import Auditoria, Cita, Mensaje, Pago, Paciente, Usuario
 
 from api.correo import enviar_correo
 
+
+class PacienteNoEncontrado(Exception):
+    pass
+
+
 def _paciente_a_dict(p):
     return {
         "id": p.id, "nombre": p.nombre, "pais": p.pais, "idioma": p.idioma,
@@ -87,7 +92,10 @@ def pagos_pendientes(db):
 
 def registrar_mensaje(db, paciente_id, tipo, idioma, texto):
     paciente = db.query(Paciente).filter(Paciente.id == paciente_id).first()
-    estado_envio = enviar_correo(paciente.email, tipo, f"<p>{texto}</p>") if paciente else "fallido"
+    if paciente is None:
+        raise PacienteNoEncontrado(f"No existe ningún paciente con id {paciente_id}")
+
+    estado_envio = enviar_correo(paciente.email, tipo, texto)
 
     mensaje = Mensaje(
         paciente_id=paciente_id,
@@ -112,26 +120,6 @@ def mensajes_de_paciente(db, paciente_id):
     )
     return [_mensaje_a_dict(m) for m in mensajes]
 
-
-def verificar_identidad(db, nombre, fecha_nacimiento):
-    paciente = (
-        db.query(Paciente)
-        .filter(Paciente.nombre == nombre)
-        .filter(Paciente.fecha_nacimiento == str(fecha_nacimiento))
-        .first()
-    )
-    return paciente is not None
-
-
-def buscar_disponibilidad(db, especialidad):
-    cita = (
-        db.query(Cita)
-        .filter(Cita.especialidad == especialidad)
-        .filter(Cita.estado == "programada")
-        .order_by(Cita.fecha)
-        .first()
-    )
-    return {"medico": cita.medico, "fecha": cita.fecha} if cita else None
 
 def _auditoria_a_dict(a):
     return {
