@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from groq import Groq
 
 from api import db as db_module
+from api import rag
 
 load_dotenv()
 
@@ -22,6 +23,7 @@ def construir_herramientas(db):
         "modificar_cita": lambda cita_id, accion, nueva_fecha=None: db_module.actualizar_cita(
             db, cita_id, accion, nueva_fecha
         ),
+        "consultar_documentacion": lambda pregunta: rag.buscar_contexto(db, pregunta),
     }
 
 
@@ -107,13 +109,38 @@ DEFINICIONES_HERRAMIENTAS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "consultar_documentacion",
+            "description": (
+                "Busca en la documentación de referencia del equipo (políticas de aseguradoras: "
+                "cobertura, documentación requerida, preautorización, copagos). Úsala para preguntas "
+                "sobre qué cubre o qué exige una aseguradora concreta. Devuelve fragmentos con su "
+                "documento y sección de origen, que debes citar en la respuesta."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "pregunta": {
+                        "type": "string",
+                        "description": "La pregunta o tema a buscar, en lenguaje natural",
+                    }
+                },
+                "required": ["pregunta"],
+            },
+        },
+    },
 ]
 
 SYSTEM_PROMPT = """Eres Anisa, la asistente del equipo de Atención al Paciente Internacional.
 Tienes herramientas para buscar pacientes, consultar citas y pagos pendientes,
-y enviar mensajes. Usa las herramientas cuando las necesites. Responde siempre
-en español, de forma breve y clara. Si envías un mensaje, redáctalo en el idioma
-del paciente."""
+enviar mensajes, y consultar documentación de referencia sobre aseguradoras. Usa las
+herramientas cuando las necesites. Responde siempre en español, de forma breve y clara.
+Si envías un mensaje, redáctalo en el idioma del paciente. Si usas consultar_documentacion,
+cita siempre el documento y la sección de donde sale la información (p. ej. "según Bupa
+Global, sección Documentación requerida..."); si no encuentra nada relevante, dilo
+claramente en vez de inventar una respuesta."""
 
 MAX_PASOS = 8  # evita bucles infinitos si el modelo no deja de pedir herramientas
 

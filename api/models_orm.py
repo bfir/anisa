@@ -1,7 +1,10 @@
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 
 from api.database import Base
+
+DIMENSION_EMBEDDING = 1024  # Cohere embed-multilingual-v3.0
 
 class Paciente(Base):
     __tablename__ = "pacientes"
@@ -74,4 +77,17 @@ class Auditoria(Base):
     pasos = Column(JSON)
     creado_en = Column(String)
     usuario = relationship("Usuario")
+
+
+class DocumentoChunk(Base):
+    """Un fragmento (sección) de un documento de referencia (p. ej. la política de una
+    aseguradora) junto a su embedding, para búsqueda semántica (RAG). Los documentos de origen
+    viven en data/documentos/ y se cargan con scripts/ingestar_documentos.py."""
+    __tablename__ = "documento_chunks"
+    id = Column(Integer, primary_key=True)
+    documento = Column(String)   # nombre del archivo de origen, p. ej. "bupa_global.md"
+    titulo = Column(String)      # título legible, p. ej. "Bupa Global"
+    seccion = Column(String)     # encabezado "##" de esa sección, p. ej. "Documentación requerida"
+    texto = Column(String)
+    embedding = Column(Vector(DIMENSION_EMBEDDING))
 

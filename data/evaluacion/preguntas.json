@@ -1,0 +1,142 @@
+[
+  {
+    "id": 1,
+    "pregunta": "¿Qué documentos hay que reunir antes de admitir a un paciente con Bupa Global?",
+    "documento_esperado": "bupa_global.md",
+    "seccion_esperada": "Documentación requerida",
+    "respuesta_referencia": "Pasaporte vigente, tarjeta de afiliación de Bupa Global con número de póliza, carta de garantía (salvo urgencias) e informe médico del especialista de origen si el tratamiento viene derivado."
+  },
+  {
+    "id": 2,
+    "pregunta": "¿Con cuánta antelación hay que pedir la preautorización de una intervención programada a Bupa Global?",
+    "documento_esperado": "bupa_global.md",
+    "seccion_esperada": "Preautorización y aprobación",
+    "respuesta_referencia": "Con un mínimo de 5 días hábiles de antelación."
+  },
+  {
+    "id": 3,
+    "pregunta": "¿Un paciente con el plan Silver de Cigna tiene cubierta una cirugía programada no urgente?",
+    "documento_esperado": "cigna.md",
+    "seccion_esperada": "Cobertura para pacientes internacionales",
+    "respuesta_referencia": "No. El plan Silver solo cubre hospitalización por urgencia o accidente, no cirugía programada no urgente."
+  },
+  {
+    "id": 4,
+    "pregunta": "¿Qué copago tiene el plan Silver de Cigna en consultas ambulatorias?",
+    "documento_esperado": "cigna.md",
+    "seccion_esperada": "Copagos y franquicia",
+    "respuesta_referencia": "20% de copago en consultas ambulatorias."
+  },
+  {
+    "id": 5,
+    "pregunta": "¿Qué formulario hace falta si el tratamiento con Allianz Care se conoce con antelación?",
+    "documento_esperado": "allianz_care.md",
+    "seccion_esperada": "Documentación requerida",
+    "respuesta_referencia": "El formulario de 'Pre-authorisation'."
+  },
+  {
+    "id": 6,
+    "pregunta": "¿Qué franquicia tiene siempre el plan Essential de Allianz Care?",
+    "documento_esperado": "allianz_care.md",
+    "seccion_esperada": "Copagos y franquicia",
+    "respuesta_referencia": "500 €, fija, sin posibilidad de elegir otra."
+  },
+  {
+    "id": 7,
+    "pregunta": "¿Las urgencias con AXA Global Healthcare requieren preautorización previa?",
+    "documento_esperado": "axa.md",
+    "seccion_esperada": "Preautorización y aprobación",
+    "respuesta_referencia": "No requieren preautorización previa, pero el hospital debe notificar el ingreso en las primeras 48 horas."
+  },
+  {
+    "id": 8,
+    "pregunta": "¿Qué pasa si el hospital no está en la red de proveedores de AXA?",
+    "documento_esperado": "axa.md",
+    "seccion_esperada": "Contacto y notas para el equipo",
+    "respuesta_referencia": "El paciente paga directamente y solicita el reembolso él mismo después."
+  },
+  {
+    "id": 9,
+    "pregunta": "¿GeoBlue funciona normalmente con pago directo al hospital o con reembolso?",
+    "documento_esperado": "geoblue.md",
+    "seccion_esperada": "Preautorización y aprobación",
+    "respuesta_referencia": "Funciona mayoritariamente en modo reembolso, a diferencia de las aseguradoras europeas de la lista."
+  },
+  {
+    "id": 10,
+    "pregunta": "¿Qué tipo de recibos exige GeoBlue para aceptar un reembolso?",
+    "documento_esperado": "geoblue.md",
+    "seccion_esperada": "Documentación requerida",
+    "respuesta_referencia": "Recibos detallados y desglosados; rechaza reembolsos con factura no desglosada."
+  },
+  {
+    "id": 11,
+    "pregunta": "¿Cuánto puede tardar la aprobación previa de Daman para tratamiento fuera de EAU?",
+    "documento_esperado": "daman_health_insurance.md",
+    "seccion_esperada": "Preautorización y aprobación",
+    "respuesta_referencia": "Entre 5 y 10 días laborables."
+  },
+  {
+    "id": 12,
+    "pregunta": "¿Qué pasa si el informe médico de un paciente con Daman está solo en árabe?",
+    "documento_esperado": "daman_health_insurance.md",
+    "seccion_esperada": "Documentación requerida",
+    "respuesta_referencia": "Hay que traducirlo al inglés o español para que el equipo clínico de destino pueda revisarlo."
+  },
+  {
+    "id": 13,
+    "pregunta": "¿Cómo se llaman los centros de pago directo de Sanitas?",
+    "documento_esperado": "sanitas.md",
+    "seccion_esperada": "Contacto y notas para el equipo",
+    "respuesta_referencia": "Centros 'de cuadro médico'."
+  },
+  {
+    "id": 14,
+    "pregunta": "¿Las intervenciones quirúrgicas programadas con Sanitas necesitan preautorización?",
+    "documento_esperado": "sanitas.md",
+    "seccion_esperada": "Preautorización y aprobación",
+    "respuesta_referencia": "Sí, con un plazo de respuesta habitual de 2-4 días laborables."
+  },
+  {
+    "id": 15,
+    "pregunta": "Entre Bupa Global, Cigna, Allianz Care, AXA, GeoBlue, Daman Health Insurance y Sanitas, ¿cuál no tiene franquicia anual, solo copagos fijos bajos por consulta?",
+    "documento_esperado": "sanitas.md",
+    "seccion_esperada": "Copagos y franquicia",
+    "respuesta_referencia": "Sanitas, con copagos fijos de entre 2 € y 8 € según el servicio, sin franquicia anual."
+  },
+  {
+    "id": 16,
+    "pregunta": "Entre Bupa Global, Cigna, Allianz Care, AXA, GeoBlue, Daman Health Insurance y Sanitas, ¿cuál tiene el plazo de aprobación previa más largo para tratamiento internacional?",
+    "documento_esperado": "daman_health_insurance.md",
+    "seccion_esperada": "Preautorización y aprobación",
+    "respuesta_referencia": "Daman Health Insurance, entre 5 y 10 días laborables."
+  },
+  {
+    "id": 17,
+    "pregunta": "¿Qué planes de Bupa Global no tienen ninguna franquicia?",
+    "documento_esperado": "bupa_global.md",
+    "seccion_esperada": "Copagos y franquicia",
+    "respuesta_referencia": "Gold y Platinum no tienen franquicia; solo el plan Classic tiene franquicia anual de 250 €."
+  },
+  {
+    "id": 18,
+    "pregunta": "¿Qué plan de Cigna Global tiene línea prioritaria de preautorización con respuesta en 24h?",
+    "documento_esperado": "cigna.md",
+    "seccion_esperada": "Preautorización y aprobación",
+    "respuesta_referencia": "El plan Gold."
+  },
+  {
+    "id": 19,
+    "pregunta": "¿Qué aseguradora de esta lista cubre tratamientos de fertilidad in vitro?",
+    "documento_esperado": null,
+    "seccion_esperada": null,
+    "respuesta_referencia": "Ninguno de los documentos disponibles menciona cobertura de FIV; el sistema debería decir que no tiene esa información en vez de inventar una respuesta."
+  },
+  {
+    "id": 20,
+    "pregunta": "¿Cuál es el horario de atención telefónica del hospital?",
+    "documento_esperado": null,
+    "seccion_esperada": null,
+    "respuesta_referencia": "Esta información no está en los documentos de aseguradoras; el sistema debería decir que no lo sabe, no inventar un horario."
+  }
+]

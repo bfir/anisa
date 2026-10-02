@@ -28,3 +28,9 @@ psycopg2-binary
 psycopg[binary]
 
 resend
+
+cohere
+pgvector
+
+pytest
+rank_bm25

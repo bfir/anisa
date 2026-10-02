@@ -25,7 +25,7 @@ if config.config_file_name is not None:
 # Importa Base y todos los modelos para que target_metadata los conozca y
 # "alembic revision --autogenerate" pueda comparar el esquema real con ellos.
 from api.database import Base
-from api.models_orm import Auditoria, Cita, Mensaje, Pago, Paciente, Usuario  # noqa: F401
+from api.models_orm import Auditoria, Cita, DocumentoChunk, Mensaje, Pago, Paciente, Usuario  # noqa: F401
 
 target_metadata = Base.metadata
 
