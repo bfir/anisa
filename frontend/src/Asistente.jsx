@@ -2,6 +2,18 @@ import { useState } from "react";
 import { Send } from "lucide-react";
 import { apiFetch } from "./apiClient";
 
+function conFormato(texto) {
+  return texto.split(/(\*\*[^*]+\*\*|\*[^*\n]+\*)/g).map((trozo, i) => {
+    if (trozo.startsWith("**") && trozo.endsWith("**") && trozo.length > 4) {
+      return <strong key={i}>{trozo.slice(2, -2)}</strong>;
+    }
+    if (trozo.startsWith("*") && trozo.endsWith("*") && trozo.length > 2) {
+      return <em key={i}>{trozo.slice(1, -1)}</em>;
+    }
+    return trozo;
+  });
+}
+
 function Asistente() {
   const [historial, setHistorial] = useState([]);
   const [pregunta, setPregunta] = useState("");
@@ -49,13 +61,14 @@ function Asistente() {
         {historial.map((turno, i) => (
           <div key={i} className={turno.rol === "usuario" ? "text-right" : ""}>
             <div
-              className={`inline-block rounded-2xl px-4 py-2 max-w-[85%] text-sm text-left ${
+              dir="auto"
+              className={`inline-block rounded-2xl px-4 py-2 max-w-[85%] text-sm text-start whitespace-pre-line ${
                 turno.rol === "usuario"
                   ? "bg-accent text-white"
                   : "bg-surface border border-hairline"
               }`}
             >
-              {turno.texto}
+              {turno.rol === "asistente" ? conFormato(turno.texto) : turno.texto}
             </div>
             {turno.pasos && turno.pasos.length > 0 && (
               <details className="text-xs text-ink-soft mt-1 text-left">
