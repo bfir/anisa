@@ -1,0 +1,7 @@
+# Dependencias de desarrollo: los scripts de scripts/ y los tests de tests/, no necesarias en producción.
+-r requirements.txt
+
+faker==40.39.0
+smolagents[openai]==1.26.0
+pytest==9.1.1
+rank_bm25==0.2.2

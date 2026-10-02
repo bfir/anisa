@@ -4,10 +4,12 @@ import { apiFetch } from "./apiClient";
 function Auditoria() {
   const [registros, setRegistros] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [sinPermiso, setSinPermiso] = useState(false);
 
   useEffect(() => {
     apiFetch("/auditoria")
       .then(setRegistros)
+      .catch((error) => setSinPermiso(error.status === 403))
       .finally(() => setCargando(false));
   }, []);
 
@@ -22,7 +24,12 @@ function Auditoria() {
       </div>
 
       {cargando && <p className="text-sm text-ink-soft">Cargando...</p>}
-      {!cargando && registros.length === 0 && (
+      {sinPermiso && (
+        <p className="text-sm text-ink-soft">
+          Tu rol no tiene acceso al registro de auditoría.
+        </p>
+      )}
+      {!cargando && !sinPermiso && registros.length === 0 && (
         <p className="text-sm text-ink-soft">Todavía no se ha usado el asistente.</p>
       )}
 

@@ -42,7 +42,9 @@ export async function apiFetch(ruta, opciones = {}) {
   }
 
   if (!respuesta.ok) {
-    throw new Error(`Error ${respuesta.status} llamando a ${ruta}`);
+    const error = new Error(`Error ${respuesta.status} llamando a ${ruta}`);
+    error.status = respuesta.status;
+    throw error;
   }
 
   return respuesta.json();

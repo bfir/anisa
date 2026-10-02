@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Calendar, CalendarCheck, Users, Wallet } from "lucide-react";
 import { apiFetch } from "./apiClient";
+import { useUsuario } from "./usuarioContext";
 import AlertsStrip from "./AlertsStrip";
 import KpiCard from "./KpiCard";
 import AppointmentsList from "./AppointmentsList";
@@ -17,16 +18,26 @@ function saludo() {
 
 function Inicio() {
   const navegar = useNavigate();
-  const [usuario, setUsuario] = useState(null);
+  const usuario = useUsuario();
   const [citasHoy, setCitasHoy] = useState([]);
   const [citasSemana, setCitasSemana] = useState([]);
   const [pagosPendientes, setPagosPendientes] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    apiFetch("/auth/me").then(setUsuario);
-    apiFetch("/citas/proximas?dias=1").then(setCitasHoy);
-    apiFetch("/citas/proximas?dias=7").then(setCitasSemana);
-    apiFetch("/pagos/pendientes").then(setPagosPendientes);
+    Promise.all([
+      apiFetch("/citas/proximas?dias=1"),
+      apiFetch("/citas/proximas?dias=7"),
+      apiFetch("/pagos/pendientes"),
+    ])
+      .then(([hoy, semana, pagos]) => {
+        setCitasHoy(hoy);
+        setCitasSemana(semana);
+        setPagosPendientes(pagos);
+      })
+      .catch(() => setError(true))
+      .finally(() => setCargando(false));
   }, []);
 
   const fecha = new Intl.DateTimeFormat("es-ES", {
@@ -40,6 +51,29 @@ function Inicio() {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date());
+
+  if (cargando) {
+    return (
+      <p className="text-ink-soft text-sm">
+        Cargando el panel... La API está en el plan gratuito de Render y, si llevaba un rato
+        inactiva, la primera carga puede tardar hasta un minuto.
+      </p>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-2">
+        <p className="text-red-ink text-sm">No se ha podido cargar el panel.</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 rounded-lg border border-hairline bg-surface text-sm font-medium hover:bg-bg transition"
+        >
+          Reintentar
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

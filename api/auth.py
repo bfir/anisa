@@ -52,9 +52,15 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     return usuario
 
 
-def require_rol(rol_requerido):
+def require_rol(*roles_permitidos):
     def verificador(usuario: Usuario = Depends(get_current_user)):
-        if usuario.rol != rol_requerido:
+        if usuario.rol not in roles_permitidos:
             raise HTTPException(status_code=403, detail="No tienes permiso para esto")
         return usuario
     return verificador
+
+
+# Quién puede provocar efectos hacia el paciente (correos, cambios de cita).
+puede_actuar = require_rol("admin", "coordinador")
+# El registro de auditoría solo lo lee quien supervisa, no quien es auditado.
+puede_auditar = require_rol("admin")

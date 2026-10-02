@@ -20,6 +20,9 @@ detectar pagos pendientes y preparar y enviar recordatorios en el idioma de cada
 
 Credenciales de prueba: `admin@anisa.dev` / `admin123` (o `coordinador@anisa.dev` / `coord123`).
 
+Ambos roles pueden usar el asistente, enviar mensajes y modificar citas; el registro de
+auditoría es exclusivo de `admin`.
+
 ---
 
 ## El problema
@@ -118,8 +121,10 @@ Aplica las migraciones (crea/actualiza las tablas en tu base):
 alembic upgrade head
 ```
 
-Genera los datos sintéticos (pacientes, citas, pagos, usuarios demo):
+Genera los datos sintéticos (pacientes, citas, pagos, usuarios demo). Los scripts de
+`scripts/` (y los tests) necesitan además las dependencias de desarrollo:
 ```powershell
+pip install -r requirements-dev.txt
 python -m scripts.generar_datos
 ```
 
