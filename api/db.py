@@ -163,6 +163,19 @@ def listar_auditoria(db, limite=100):
     return [_auditoria_a_dict(a) for a in registros]
 
 
+def buscar_auditoria(db, filtro, limite=20):
+    """Busca en el historial de auditoría por texto que aparezca en la pregunta o la respuesta."""
+    patron = f"%{filtro}%"
+    registros = (
+        db.query(Auditoria)
+        .filter((Auditoria.pregunta.ilike(patron)) | (Auditoria.respuesta.ilike(patron)))
+        .order_by(Auditoria.id.desc())
+        .limit(limite)
+        .all()
+    )
+    return [_auditoria_a_dict(a) for a in registros]
+
+
 def obtener_usuario_por_email(db, email):
     return db.query(Usuario).filter(Usuario.email == email).first()
 

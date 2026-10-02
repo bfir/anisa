@@ -34,3 +34,5 @@ pgvector
 
 pytest
 rank_bm25
+
+mcp[cli]
