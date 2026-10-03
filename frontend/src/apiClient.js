@@ -1,4 +1,5 @@
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_URL = import.meta.env?.VITE_API_URL || "http://localhost:8000";
+let sessionRequest = null;
 
 export function getToken() {
   return localStorage.getItem("token");
@@ -6,6 +7,91 @@ export function getToken() {
 
 export function logout() {
   localStorage.removeItem("token");
+}
+
+function isDemoToken(token) {
+  if (!token) return false;
+  try {
+    const payload = token.split(".")[1].replaceAll("-", "+").replaceAll("_", "/");
+    return JSON.parse(atob(payload)).demo === true;
+  } catch {
+    return false;
+  }
+}
+
+function session(token, publicDemo) {
+  return { publicDemo, demo: isDemoToken(token), token };
+}
+
+async function crearSesionDemo() {
+  async function create() {
+    const current = getToken();
+    if (current) return current;
+    let visitorId = localStorage.getItem("demo_visitor_id");
+    let visitorSecret = localStorage.getItem("demo_visitor_secret");
+    if (!visitorId || !visitorSecret) {
+      visitorId = crypto.randomUUID();
+      visitorSecret = crypto.randomUUID();
+      localStorage.setItem("demo_visitor_id", visitorId);
+      localStorage.setItem("demo_visitor_secret", visitorSecret);
+    }
+    const demo = await fetch(`${API_URL}/auth/demo`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        visitor_id: visitorId,
+        visitor_secret: visitorSecret,
+      }),
+      signal: AbortSignal.timeout(90_000),
+    });
+    if (!demo.ok) {
+      const error = new Error("Could not start demo session");
+      error.status = demo.status;
+      throw error;
+    }
+    const datos = await demo.json();
+    if (typeof datos.access_token !== "string" || !datos.access_token) {
+      throw new Error("Invalid demo session");
+    }
+    localStorage.setItem("token", datos.access_token);
+    return datos.access_token;
+  }
+
+  if (globalThis.navigator?.locks) {
+    return globalThis.navigator.locks.request("anisa-demo-session", create);
+  }
+  return create();
+}
+
+async function configurarSesion(teamAccess) {
+  const existingToken = getToken();
+  try {
+    const respuesta = await fetch(`${API_URL}/auth/config`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(90_000),
+    });
+    if (!respuesta.ok) throw new Error("Could not load access settings");
+    const configuracion = await respuesta.json();
+    if (typeof configuracion.public_demo !== "boolean") {
+      throw new Error("Invalid access settings");
+    }
+
+    if (teamAccess && isDemoToken(getToken())) logout();
+    const token = configuracion.public_demo && !teamAccess
+      ? await crearSesionDemo()
+      : getToken();
+    return session(token, configuracion.public_demo);
+  } catch (error) {
+    if (existingToken && !teamAccess) return session(existingToken, null);
+    throw error;
+  }
+}
+
+export function initializeSession({ teamAccess = false } = {}) {
+  if (!sessionRequest) {
+    sessionRequest = configurarSesion(teamAccess).finally(() => { sessionRequest = null; });
+  }
+  return sessionRequest;
 }
 
 export async function login(email, password) {

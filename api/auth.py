@@ -26,9 +26,15 @@ def verify_password(password, password_hash):
     return pwd_context.verify(password, password_hash)
 
 
-def create_access_token(email):
+def public_demo_enabled():
+    return os.getenv("PUBLIC_DEMO_ENABLED", "false").strip().lower() == "true"
+
+
+def create_access_token(email, demo=False):
     expira = datetime.utcnow() + timedelta(minutes=MINUTOS_EXPIRACION)
     datos = {"sub": email, "exp": expira}
+    if demo:
+        datos["demo"] = True
     return jwt.encode(datos, SECRET_KEY, algorithm=ALGORITMO)
 
 
@@ -43,11 +49,15 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         email = payload.get("sub")
         if email is None:
             raise credenciales_invalidas
+        if payload.get("demo") and not public_demo_enabled():
+            raise credenciales_invalidas
     except jwt.PyJWTError:
         raise credenciales_invalidas
 
     usuario = db.query(Usuario).filter(Usuario.email == email).first()
     if usuario is None:
+        raise credenciales_invalidas
+    if payload.get("demo") and usuario.rol != "coordinador":
         raise credenciales_invalidas
     return usuario
 
