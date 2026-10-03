@@ -40,19 +40,31 @@ de `admin`.
    no hace falta ninguna variable adicional en Vercel.
 
 El frontend consulta `GET /auth/config` al arrancar y, si no hay token guardado, abre
-una sesión con `POST /auth/demo`. El JWT se conserva en `localStorage` durante las
-visitas posteriores y caduca a las 24 horas, igual que las sesiones normales. Un fallo
-de conexión muestra un reintento; la API gratuita puede tardar en despertar.
+una sesión con `POST /auth/demo`. El navegador conserva un identificador aleatorio para
+recuperar la misma identidad cuando caduque el JWT. Las pestañas coordinan la creación
+de la sesión para no sustituirse entre sí. El JWT se conserva en `localStorage` y caduca
+a las 24 horas, igual que las sesiones normales. Si solo falla la consulta de
+configuración, una sesión guardada puede seguir abriendo Anisa.
+
+La API limita por proceso las nuevas sesiones demo a 12 por minuto
+(`PUBLIC_DEMO_SESSION_LIMIT`) y conserva como máximo 4096 identidades
+(`PUBLIC_DEMO_MAX_USERS`). Al alcanzar el máximo, elimina la identidad demo más antigua
+y su auditoría antes de crear otra. Así se limita el coste de Argon2 y el crecimiento
+de `usuarios`. En una instalación con varios procesos se debe aplicar además un límite
+equivalente en el proxy. Un fallo de conexión sin sesión muestra un reintento; la API
+gratuita puede tardar en despertar.
 
 Este modo está pensado para la **demo con datos sintéticos**. Los pacientes, citas,
 pagos y mensajes se comparten entre visitantes, incluidos los cambios. Las propuestas
-tienen propietarios independientes. Las identidades de visitante se guardan en
-`usuarios` para conservar las referencias de auditoría; no se eliminan automáticamente.
-Los correos siguen dirigidos exclusivamente a `EMAIL_DEMO_DESTINO`, el buzón de pruebas.
+tienen propietarios independientes. Las identidades se guardan en `usuarios` para
+conservar las referencias de auditoría mientras sigan dentro del límite. Los correos
+siguen dirigidos exclusivamente a `EMAIL_DEMO_DESTINO`, el buzón de pruebas.
 
 Para volver al acceso privado, establecer `PUBLIC_DEMO_ENABLED=false` y redesplegar
 la API. Los tokens demo dejan de ser válidos, incluso antes de su caducidad, y el
 frontend vuelve al formulario al recargar. Los tokens del equipo conservan su validez.
+Con el modo público activo, el equipo puede abrir el formulario desde Ajustes →
+«Acceso del equipo».
 
 ---
 

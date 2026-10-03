@@ -18,6 +18,7 @@ import Layout from "./Layout";
 
 function App() {
   const { t } = useLocale();
+  const teamAccess = new URLSearchParams(window.location.search).get("acceso") === "equipo";
   const [session, setSession] = useState(null);
   const [attempt, setAttempt] = useState(0);
   const [startupError, setStartupError] = useState(false);
@@ -28,11 +29,11 @@ function App() {
 
   useEffect(() => {
     let active = true;
-    initializeSession()
+    initializeSession({ teamAccess })
       .then((result) => { if (active) setSession(result); })
       .catch(() => { if (active) setStartupError(true); });
     return () => { active = false; };
-  }, [attempt]);
+  }, [attempt, teamAccess]);
 
   async function manejarLogin(evento) {
     evento.preventDefault();
@@ -41,7 +42,8 @@ function App() {
     setLoading(true);
     try {
       await login(email, password);
-      setSession({ ...session, token: getToken() });
+      window.history.replaceState({}, "", window.location.pathname);
+      setSession({ ...session, demo: false, token: getToken() });
     } catch (err) {
       setError(err.status === 401 ? "invalidLogin" : "loginError");
     } finally {
@@ -108,7 +110,7 @@ function App() {
         <Route path="/pagos" element={<Pagos />} />
         <Route path="/informes" element={<Informes />} />
         <Route path="/auditoria" element={<Auditoria />} />
-        <Route path="/ajustes" element={<Ajustes publicDemo={session.publicDemo} />} />
+        <Route path="/ajustes" element={<Ajustes demo={session.demo} />} />
         <Route path="*" element={<><PageHeading title={t("notFound")} /><Link className="button button-primary" to="/">{t("goHome")}</Link></>} />
       </Routes>
     </Layout>

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import UUID4, BaseModel, Field, model_validator
 from typing import Literal
 
 class Paciente(BaseModel):
@@ -113,6 +113,10 @@ class Token(BaseModel):
 
 class ConfiguracionAcceso(BaseModel):
     public_demo: bool
+
+
+class SolicitudDemo(BaseModel):
+    visitor_id: UUID4
 
 
 class UsuarioOut(BaseModel):

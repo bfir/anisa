@@ -1,5 +1,8 @@
+from collections import deque
+import os
 from secrets import token_urlsafe
-from uuid import uuid4
+from threading import Lock
+from time import monotonic
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -14,7 +17,7 @@ from api.database import get_db
 from api.modelos import (
     Paciente, Cita, Pago, MensajeNuevo, Mensaje,
     PreguntaAgente, RespuestaAgente, CitaActualizar, RegistroAuditoria,
-    AccionPropuesta, DecisionAccion, ConfiguracionAcceso,
+    AccionPropuesta, DecisionAccion, ConfiguracionAcceso, SolicitudDemo,
 )
 
 from fastapi.security import OAuth2PasswordRequestForm
@@ -24,10 +27,13 @@ from api.auth import (
     puede_actuar, puede_auditar, public_demo_enabled, verify_password,
 )
 from api.modelos import Token, UsuarioOut
-from api.models_orm import Usuario
+from api.models_orm import Auditoria, Usuario
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Anisa API")
+demo_session_requests = deque()
+demo_session_lock = Lock()
+demo_user_lock = Lock()
 
 app.add_middleware(
     CORSMiddleware,
@@ -145,17 +151,48 @@ def configuracion_acceso():
 
 
 @app.post("/auth/demo", response_model=Token)
-def acceder_demo(db: Session = Depends(get_db)):
+def acceder_demo(cuerpo: SolicitudDemo, db: Session = Depends(get_db)):
     if not public_demo_enabled():
         raise HTTPException(status_code=403, detail="La demo pública está desactivada")
-    usuario = Usuario(
-        nombre="Visitante",
-        email=f"{uuid4().hex}@demo.anisa.test",
-        rol="coordinador",
-        password_hash=hash_password(token_urlsafe(32)),
-    )
-    db.add(usuario)
-    db.commit()
+
+    ahora = monotonic()
+    try:
+        limite = max(1, min(int(os.getenv("PUBLIC_DEMO_SESSION_LIMIT", "12")), 1000))
+        max_users = max(1, min(int(os.getenv("PUBLIC_DEMO_MAX_USERS", "4096")), 65536))
+    except ValueError as error:
+        raise HTTPException(status_code=503, detail="La demo pública no está bien configurada") from error
+    with demo_session_lock:
+        while demo_session_requests and ahora - demo_session_requests[0] >= 60:
+            demo_session_requests.popleft()
+        if len(demo_session_requests) >= limite:
+            raise HTTPException(
+                status_code=429,
+                detail="Demasiados accesos a la demo. Inténtalo de nuevo en un minuto.",
+                headers={"Retry-After": "60"},
+            )
+        demo_session_requests.append(ahora)
+
+    email = f"{cuerpo.visitor_id.hex}@demo.anisa.test"
+    with demo_user_lock:
+        usuario = db.query(Usuario).filter(Usuario.email == email).first()
+        if usuario is None:
+            visitantes = db.query(Usuario).filter(Usuario.email.like("%@demo.anisa.test"))
+            if visitantes.count() >= max_users:
+                anterior = visitantes.order_by(Usuario.id).first()
+                db.query(Auditoria).filter(Auditoria.usuario_id == anterior.id).delete()
+                db.delete(anterior)
+                db.flush()
+            usuario = Usuario(
+                nombre="Visitante",
+                email=email,
+                rol="coordinador",
+                password_hash=hash_password(token_urlsafe(32)),
+            )
+            db.add(usuario)
+            db.commit()
+        elif usuario.rol != "coordinador":
+            raise HTTPException(status_code=503, detail="Esta identidad de demo no está disponible")
+
     token = create_access_token(usuario.email, demo=True)
     return {"access_token": token, "token_type": "bearer"}
 

@@ -29,6 +29,7 @@ export const messages = {
   publicDemoAccess: ["Acceso público de demostración", "Public demo access", "الوصول إلى النسخة التجريبية العامة"],
   demoVisitor: ["Visitante de la demo", "Demo visitor", "زائر النسخة التجريبية"],
   publicDemoNote: ["Puedes explorar Anisa sin cuenta ni contraseña. Los datos sintéticos y sus cambios se comparten entre visitantes.", "Explore Anisa without an account or password. Synthetic data and changes are shared between visitors.", "يمكنك استكشاف أنيسة دون حساب أو كلمة مرور. تُشارك البيانات الاصطناعية والتغييرات بين الزوار."],
+  teamSignIn: ["Acceso del equipo", "Team sign in", "دخول الفريق"],
   signIn: ["Iniciar sesión", "Sign in", "تسجيل الدخول"],
   signInIntro: ["Accede al espacio de trabajo de tu equipo.", "Access your team's workspace.", "ادخل إلى مساحة عمل فريقك."],
   email: ["Correo electrónico", "Email", "البريد الإلكتروني"],
