@@ -2,7 +2,11 @@ import { useState } from "react";
 import { ArrowRight, Send } from "lucide-react";
 import { apiFetch } from "./apiClient";
 import { useLocale } from "./localeContext";
-import { Brand } from "./Ui";
+import { useResource } from "./useResource";
+import { Brand, Notice, ResourceState } from "./Ui";
+import { patientLanguages } from "./translations";
+
+const messageTypeKeys = { recordatorio_cita: "appointmentReminder", pago_pendiente: "paymentReminder", informativo: "informational" };
 
 function inlineMarkdown(text) {
   return text.split(/(\*\*[^*\n]+\*\*|\*[^*\s][^*\n]*?\*|_[^_\s][^_\n]*?_)/g).map((part, index) => {
@@ -17,11 +21,50 @@ function AssistantText({ text }) {
 }
 
 export default function Asistente() {
-  const { t, language } = useLocale();
+  const { t, language, formatDate } = useLocale();
   const [history, setHistory] = useState([]);
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
+  const [actions, setActions] = useState([]);
+  const [deciding, setDeciding] = useState(null);
+  const [actionError, setActionError] = useState(null);
+  const pending = useResource(["/agente/acciones"]);
+  const proposals = [...new Map([...(pending.data?.[0] ?? []), ...actions].map((action) => [action.id, action])).values()];
   const prompts = ["questionPayments", "questionAppointments", "questionDocs"];
+
+  function remember(action) {
+    setActions((items) => [...items.filter((item) => item.id !== action.id), action]);
+  }
+
+  async function decide(action, decision) {
+    if (deciding !== null) return;
+    setDeciding(action.id); setActionError(null);
+    try {
+      const result = await apiFetch(`/agente/acciones/${action.id}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ decision }),
+      });
+      remember(result);
+    } catch {
+      setActionError(t("actionError"));
+      try {
+        remember(await apiFetch(`/agente/acciones/${action.id}`));
+      } catch {
+        remember({ ...action, estado: "en_curso" });
+      }
+    } finally {
+      setDeciding(null);
+    }
+  }
+
+  async function refresh(action) {
+    setDeciding(action.id); setActionError(null);
+    try {
+      remember(await apiFetch(`/agente/acciones/${action.id}`));
+    } catch {
+      setActionError(t("actionError"));
+    } finally { setDeciding(null); }
+  }
 
   async function send(event, suggestion) {
     event?.preventDefault();
@@ -33,6 +76,7 @@ export default function Asistente() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pregunta: nextQuestion, idioma: language }),
       });
+      for (const action of response.acciones ?? []) remember(action);
       setHistory((items) => [...items, {
         role: "assistant", text: response.respuesta, steps: response.pasos,
         error: response.error || response.pasos?.some((step) => step.error),
@@ -45,6 +89,50 @@ export default function Asistente() {
   return (
     <div className="assistant-page">
       <div className="conversation" aria-live="polite">
+        <ResourceState resource={pending} />
+        {actionError && <Notice tone="error">{actionError}</Notice>}
+        {proposals.length > 0 && (
+          <section className="panel" aria-label={t("reviewActions")}>
+            <div className="panel-heading"><h2>{t("reviewActions")}</h2></div>
+            <div className="panel-body">
+              <p className="muted text-sm mb-4">{t("approvalIntro")}</p>
+              {proposals.map((action) => {
+                const isMessage = action.herramienta === "enviar_mensaje";
+                const expired = new Date(`${action.expira_en}Z`) <= new Date();
+                const state = action.estado === "pendiente" && expired ? "caducada" : action.estado;
+                return (
+                  <article key={action.id} className="approval-entry">
+                    <h3>{isMessage ? t("sendMessage") : t(action.argumentos.accion === "cancelar" ? "cancelAppointment" : "reschedule")}</h3>
+                    <p dir="auto">{action.paciente.nombre} <span className="meta">· ID <bdi>{action.paciente.id}</bdi></span></p>
+                    {isMessage ? (
+                      <>
+                        <p className="meta">{t("email")}: <bdi dir="ltr">{action.paciente.email}</bdi> · {patientLanguages[action.argumentos.idioma]}</p>
+                        <p className="meta">{t("messageType")}: {t(messageTypeKeys[action.argumentos.tipo])}</p>
+                        <p className="meta">{t("demoEmail")}</p>
+                        <p className="message-text" dir={action.argumentos.idioma === "ar" ? "rtl" : "auto"} lang={action.argumentos.idioma}>{action.argumentos.texto}</p>
+                      </>
+                    ) : (
+                      <>
+                        <p>{action.cita.especialidad} · {action.cita.medico}</p>
+                        <p className="meta">{t("currentAppointment")}: {formatDate(action.cita.fecha)} · ID <bdi>{action.argumentos.cita_id}</bdi></p>
+                        {action.argumentos.nueva_fecha && <p>{t("newDate")}: {formatDate(action.argumentos.nueva_fecha)}</p>}
+                      </>
+                    )}
+                    <p role="status" className="meta mt-3">{t(`approval_${state}`)}</p>
+                    {state === "pendiente" && (
+                      <div className="approval-buttons">
+                        <button className="button button-primary" disabled={deciding !== null} onClick={() => decide(action, "aprobar")}>{deciding === action.id ? t("saving") : t("approveAction")}</button>
+                        <button className="button button-secondary" disabled={deciding !== null} onClick={() => decide(action, "rechazar")}>{t("discardAction")}</button>
+                      </div>
+                    )}
+                    {state === "en_curso" && <button className="button button-secondary mt-3" disabled={deciding !== null} onClick={() => refresh(action)}>{t("refreshAction")}</button>}
+                    {state === "fallida" && <Notice tone="error">{action.resultado?.estado_envio === "fallido" ? t("savedEmailFailed") : t("actionError")}</Notice>}
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        )}
         {history.length === 0 && (
           <section className="assistant-welcome">
             <Brand /><h2>{t("assistantTitle")}</h2><p>{t("assistantSummary")}</p>

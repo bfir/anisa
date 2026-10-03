@@ -6,22 +6,23 @@ from groq import Groq
 
 from api import db as db_module
 from api import rag
+from api import aprobaciones
 
 load_dotenv()
 
 cliente = Groq(api_key=os.environ["GROQ_API_KEY"])
 MODELO= "openai/gpt-oss-120b"
 
-def construir_herramientas(db):
+def construir_herramientas(db, usuario_id=None, pregunta="", idioma="es"):
     return {
         "buscar_pacientes": lambda nombre: db_module.buscar_pacientes(db, nombre),
         "citas_proximas": lambda dias=7, **_: db_module.citas_proximas(db, dias),
         "pagos_pendientes": lambda **_: db_module.pagos_pendientes(db),
-        "enviar_mensaje": lambda paciente_id, tipo, idioma, texto: db_module.registrar_mensaje(
-            db, paciente_id, tipo, idioma, texto
+        "enviar_mensaje": lambda **argumentos: aprobaciones.proponer(
+            db, usuario_id, pregunta, idioma, "enviar_mensaje", argumentos
         ),
-        "modificar_cita": lambda cita_id, accion, nueva_fecha=None: db_module.actualizar_cita(
-            db, cita_id, accion, nueva_fecha
+        "modificar_cita": lambda **argumentos: aprobaciones.proponer(
+            db, usuario_id, pregunta, idioma, "modificar_cita", argumentos
         ),
         "consultar_documentacion": lambda pregunta: rag.buscar_contexto(db, pregunta),
     }
@@ -69,7 +70,7 @@ DEFINICIONES_HERRAMIENTAS = [
         "function": {
             "name": "enviar_mensaje",
             "description": (
-                "Redacta y envía un mensaje a un paciente en su idioma. "
+                "Prepara un mensaje en el idioma del paciente para aprobación humana. No lo envía. "
                 "Úsalo para recordatorios de cita o avisos de pago pendiente."
             ),
             "parameters": {
@@ -94,7 +95,7 @@ DEFINICIONES_HERRAMIENTAS = [
         "type": "function",
         "function": {
             "name": "modificar_cita",
-            "description": "Reprograma o cancela una cita existente.",
+            "description": "Propone reprogramar o cancelar una cita para aprobación humana. No modifica la cita.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -137,7 +138,9 @@ SYSTEM_PROMPT = """Eres Anisa, la asistente del equipo de Atención al Paciente 
 Tienes herramientas para buscar pacientes, consultar citas y pagos pendientes,
 enviar mensajes, y consultar documentación de referencia sobre aseguradoras. Usa las
 herramientas cuando las necesites. Responde de forma breve y clara en {idioma_respuesta}.
-Si envías un mensaje, redáctalo en el idioma del paciente. Si usas consultar_documentacion,
+Enviar mensajes y modificar citas requieren aprobación explícita del operador.
+Estas herramientas solo preparan propuestas: nunca afirmes que ya se han ejecutado.
+Redacta los mensajes en el idioma del paciente. Si usas consultar_documentacion,
 cita siempre el documento y la sección de donde sale la información (p. ej. "según Bupa
 Global, sección Documentación requerida..."); si no encuentra nada relevante, dilo
 claramente en vez de inventar una respuesta."""
@@ -158,6 +161,12 @@ ERRORES_LIMITE = {
     "ar": "تعذر إكمال الطلب بعد عدة خطوات. حاول تقسيمه إلى مهمة أصغر.",
     "fr": "Je n’ai pas pu terminer la demande après plusieurs étapes. Essayez de la diviser en une tâche plus simple.",
 }
+REVISION_ACCIONES = {
+    "es": "Revisa las propuestas y aprueba o descarta cada acción. Todavía no se han enviado mensajes ni modificado citas.",
+    "en": "Review the proposals and approve or discard each action. No messages have been sent or appointments changed yet.",
+    "ar": "راجع المقترحات ووافق على كل إجراء أو ارفضه. لم تُرسل أي رسائل ولم تُعدّل المواعيد بعد.",
+    "fr": "Vérifiez les propositions et approuvez ou refusez chaque action. Aucun message n’a été envoyé ni rendez-vous modifié.",
+}
 
 
 class ErrorAgente(RuntimeError):
@@ -166,9 +175,9 @@ class ErrorAgente(RuntimeError):
         self.pasos = pasos
 
 
-def preguntar(pregunta, db, idioma="es"):
+def preguntar(pregunta, db, idioma="es", usuario_id=None):
     """Devuelve una tupla: (respuesta_final_en_texto, lista_de_pasos_dados)."""
-    herramientas_disponibles = construir_herramientas(db)
+    herramientas_disponibles = construir_herramientas(db, usuario_id, pregunta, idioma)
     mensajes = [
         {"role": "system", "content": SYSTEM_PROMPT.format(idioma_respuesta=IDIOMAS_RESPUESTA[idioma])},
         {"role": "user", "content": pregunta},
@@ -238,5 +247,12 @@ def preguntar(pregunta, db, idioma="es"):
                     ),
                 }
             )
+
+        if any(
+            paso["herramienta"] in aprobaciones.HERRAMIENTAS_ACCION
+            and paso["error"] is None
+            for paso in pasos
+        ):
+            return REVISION_ACCIONES[idioma], pasos
 
     raise ErrorAgente(ERRORES_LIMITE.get(idioma, ERRORES_LIMITE["es"]), pasos)
