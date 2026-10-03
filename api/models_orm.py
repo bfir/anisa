@@ -1,5 +1,5 @@
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, JSON
+from sqlalchemy import Column, Float, ForeignKey, Index, Integer, JSON, String, text
 from sqlalchemy.orm import relationship
 
 from api.database import Base
@@ -58,11 +58,22 @@ class Mensaje(Base):
 
 class Usuario(Base):
     __tablename__="usuarios"
+    __table_args__ = (
+        Index(
+            "uq_usuarios_demo_visitor_id",
+            "demo_visitor_id",
+            unique=True,
+            postgresql_where=text("demo_visitor_id IS NOT NULL"),
+            sqlite_where=text("demo_visitor_id IS NOT NULL"),
+        ),
+    )
     id = Column(Integer, primary_key=True)
     nombre= Column(String)
     email= Column(String)
     password_hash= Column(String)
     rol=  Column(String)
+    demo_visitor_id = Column(String, nullable=True)
+    demo_secret_hash = Column(String, nullable=True)
 
 
 class Auditoria(Base):
@@ -90,4 +101,3 @@ class DocumentoChunk(Base):
     seccion = Column(String)     # encabezado "##" de esa sección, p. ej. "Documentación requerida"
     texto = Column(String)
     embedding = Column(Vector(DIMENSION_EMBEDDING))
-

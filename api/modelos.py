@@ -117,6 +117,7 @@ class ConfiguracionAcceso(BaseModel):
 
 class SolicitudDemo(BaseModel):
     visitor_id: UUID4
+    visitor_secret: str = Field(min_length=32, max_length=128)
 
 
 class UsuarioOut(BaseModel):

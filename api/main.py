@@ -1,6 +1,7 @@
 from collections import deque
+from hashlib import sha256
 import os
-from secrets import token_urlsafe
+from secrets import compare_digest, token_urlsafe
 from threading import Lock
 from time import monotonic
 
@@ -8,6 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import Depends, FastAPI, HTTPException
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from api import db as db_module
@@ -34,6 +36,7 @@ app = FastAPI(title="Anisa API")
 demo_session_requests = deque()
 demo_session_lock = Lock()
 demo_user_lock = Lock()
+DEMO_USERS_LOCK_ID = 827394015
 
 app.add_middleware(
     CORSMiddleware,
@@ -172,26 +175,53 @@ def acceder_demo(cuerpo: SolicitudDemo, db: Session = Depends(get_db)):
             )
         demo_session_requests.append(ahora)
 
-    email = f"{cuerpo.visitor_id.hex}@demo.anisa.test"
+    visitor_id = cuerpo.visitor_id.hex
+    secret_hash = sha256(cuerpo.visitor_secret.encode()).hexdigest()
     with demo_user_lock:
-        usuario = db.query(Usuario).filter(Usuario.email == email).first()
+        if db.get_bind().dialect.name == "postgresql":
+            db.execute(
+                text("SELECT pg_advisory_xact_lock(:lock_id)"),
+                {"lock_id": DEMO_USERS_LOCK_ID},
+            )
+
+        usuario = db.query(Usuario).filter(
+            Usuario.demo_visitor_id == visitor_id
+        ).first()
         if usuario is None:
-            visitantes = db.query(Usuario).filter(Usuario.email.like("%@demo.anisa.test"))
-            if visitantes.count() >= max_users:
-                anterior = visitantes.order_by(Usuario.id).first()
-                db.query(Auditoria).filter(Auditoria.usuario_id == anterior.id).delete()
-                db.delete(anterior)
+            visitantes = db.query(Usuario).filter(
+                Usuario.demo_visitor_id.is_not(None)
+            )
+            exceso = visitantes.count() - max_users + 1
+            if exceso > 0:
+                anteriores = visitantes.order_by(Usuario.id).limit(exceso).all()
+                anteriores_ids = [anterior.id for anterior in anteriores]
+                db.query(Auditoria).filter(
+                    Auditoria.usuario_id.in_(anteriores_ids)
+                ).delete(synchronize_session=False)
+                for anterior in anteriores:
+                    db.delete(anterior)
                 db.flush()
+
+            email = f"{token_urlsafe(18)}@demo.anisa.test"
             usuario = Usuario(
                 nombre="Visitante",
                 email=email,
                 rol="coordinador",
                 password_hash=hash_password(token_urlsafe(32)),
+                demo_visitor_id=visitor_id,
+                demo_secret_hash=secret_hash,
             )
             db.add(usuario)
             db.commit()
-        elif usuario.rol != "coordinador":
-            raise HTTPException(status_code=503, detail="Esta identidad de demo no está disponible")
+        elif (
+            usuario.rol != "coordinador"
+            or not usuario.demo_secret_hash
+            or not compare_digest(usuario.demo_secret_hash, secret_hash)
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="Esta identidad de demo no está disponible",
+            )
 
     token = create_access_token(usuario.email, demo=True)
     return {"access_token": token, "token_type": "bearer"}

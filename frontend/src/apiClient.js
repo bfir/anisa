@@ -28,14 +28,20 @@ async function crearSesionDemo() {
     const current = getToken();
     if (current) return current;
     let visitorId = localStorage.getItem("demo_visitor_id");
-    if (!visitorId) {
+    let visitorSecret = localStorage.getItem("demo_visitor_secret");
+    if (!visitorId || !visitorSecret) {
       visitorId = crypto.randomUUID();
+      visitorSecret = crypto.randomUUID();
       localStorage.setItem("demo_visitor_id", visitorId);
+      localStorage.setItem("demo_visitor_secret", visitorSecret);
     }
     const demo = await fetch(`${API_URL}/auth/demo`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ visitor_id: visitorId }),
+      body: JSON.stringify({
+        visitor_id: visitorId,
+        visitor_secret: visitorSecret,
+      }),
       signal: AbortSignal.timeout(90_000),
     });
     if (!demo.ok) {

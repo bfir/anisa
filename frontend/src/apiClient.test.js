@@ -35,6 +35,7 @@ test("el modo privado no crea un visitante", async () => {
 
 test("el arranque concurrente abre una sola sesión sin enviar credenciales", async () => {
   localStorage.setItem("demo_visitor_id", "00000000-0000-4000-8000-000000000001");
+  localStorage.setItem("demo_visitor_secret", "test-secret-00000000000000000001");
   const visitorToken = token({ demo: true });
   fetch.mock.mockImplementation(async (url, options) => {
     if (url.endsWith("/auth/config")) return json({ public_demo: true });
@@ -42,6 +43,7 @@ test("el arranque concurrente abre una sola sesión sin enviar credenciales", as
     assert.equal(options.method, "POST");
     assert.deepEqual(JSON.parse(options.body), {
       visitor_id: "00000000-0000-4000-8000-000000000001",
+      visitor_secret: "test-secret-00000000000000000001",
     });
     return json({ access_token: visitorToken, token_type: "bearer" });
   });
@@ -65,6 +67,21 @@ test("una visita posterior conserva su identidad y sus propuestas", async () => 
   fetch.mock.mockImplementation(async () => json({ public_demo: true }));
   assert.deepEqual(await initializeSession(), { publicDemo: true, demo: true, token: existingToken });
   assert.equal(fetch.mock.callCount(), 1);
+});
+
+test("una identidad antigua sin secreto se reemplaza antes de abrir la demo", async () => {
+  const previousId = "00000000-0000-4000-8000-000000000001";
+  localStorage.setItem("demo_visitor_id", previousId);
+  fetch.mock.mockImplementation(async (url, options) => {
+    if (url.endsWith("/auth/config")) return json({ public_demo: true });
+    const body = JSON.parse(options.body);
+    assert.notEqual(body.visitor_id, previousId);
+    assert.equal(body.visitor_id, localStorage.getItem("demo_visitor_id"));
+    assert.equal(body.visitor_secret, localStorage.getItem("demo_visitor_secret"));
+    assert.ok(body.visitor_secret.length >= 32);
+    return json({ access_token: token({ demo: true }), token_type: "bearer" });
+  });
+  assert.equal((await initializeSession()).demo, true);
 });
 
 test("un fallo al abrir la demo permite reintentar sin guardar un token inválido", async () => {

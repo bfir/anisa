@@ -40,19 +40,26 @@ de `admin`.
    no hace falta ninguna variable adicional en Vercel.
 
 El frontend consulta `GET /auth/config` al arrancar y, si no hay token guardado, abre
-una sesión con `POST /auth/demo`. El navegador conserva un identificador aleatorio para
-recuperar la misma identidad cuando caduque el JWT. Las pestañas coordinan la creación
-de la sesión para no sustituirse entre sí. El JWT se conserva en `localStorage` y caduca
+una sesión con `POST /auth/demo`. El navegador conserva un identificador aleatorio y un
+secreto independiente para recuperar la misma identidad cuando caduque el JWT. El
+identificador no aparece en el correo técnico del visitante y no permite recuperar la
+sesión sin ese secreto. Las pestañas coordinan la creación de la sesión para no
+sustituirse entre sí. El JWT se conserva en `localStorage` y caduca
 a las 24 horas, igual que las sesiones normales. Si solo falla la consulta de
 configuración, una sesión guardada puede seguir abriendo Anisa.
 
-La API limita por proceso las nuevas sesiones demo a 12 por minuto
+La API limita por proceso las solicitudes de sesión demo a 12 por minuto
 (`PUBLIC_DEMO_SESSION_LIMIT`) y conserva como máximo 4096 identidades
-(`PUBLIC_DEMO_MAX_USERS`). Al alcanzar el máximo, elimina la identidad demo más antigua
-y su auditoría antes de crear otra. Así se limita el coste de Argon2 y el crecimiento
-de `usuarios`. En una instalación con varios procesos se debe aplicar además un límite
-equivalente en el proxy. Un fallo de conexión sin sesión muestra un reintento; la API
-gratuita puede tardar en despertar.
+(`PUBLIC_DEMO_MAX_USERS`). Antes de crear otra elimina todas las identidades demo más
+antiguas que sobren y sus auditorías, incluso si el máximo configurado se ha reducido.
+La creación y la rotación se coordinan entre procesos mediante un bloqueo de PostgreSQL;
+la base también exige que cada identificador demo sea único. Así se limita el coste de
+Argon2 y el crecimiento de `usuarios`. En una instalación con varios procesos se debe
+aplicar además un límite equivalente en el proxy. Un fallo de conexión sin sesión muestra
+un reintento; la API gratuita puede tardar en despertar.
+
+La migración que introduce el secreto elimina las identidades demo anteriores y sus
+auditorías para que ninguna sesión creada con el contrato antiguo pueda recuperarse.
 
 Este modo está pensado para la **demo con datos sintéticos**. Los pacientes, citas,
 pagos y mensajes se comparten entre visitantes, incluidos los cambios. Las propuestas

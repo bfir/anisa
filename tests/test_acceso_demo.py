@@ -1,6 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
@@ -52,6 +53,7 @@ def cabeceras(response):
 def abrir_demo(client, numero=1):
     return client.post("/auth/demo", json={
         "visitor_id": f"00000000-0000-4000-8000-{numero:012d}",
+        "visitor_secret": f"test-secret-{numero:020d}",
     })
 
 
@@ -62,17 +64,24 @@ def test_modo_privado_por_defecto_no_crea_visitantes(client, db):
     assert db.query(Usuario).count() == 1
 
 
-def test_demo_accede_sin_credenciales_y_no_concede_administracion(client, monkeypatch):
+def test_demo_accede_sin_credenciales_y_no_concede_administracion(
+    client, db, monkeypatch
+):
     monkeypatch.setenv("PUBLIC_DEMO_ENABLED", "true")
     assert client.get("/auth/config").json() == {"public_demo": True}
     headers = cabeceras(client.post("/auth/demo", json={
         "visitor_id": "00000000-0000-4000-8000-000000000001",
+        "visitor_secret": "test-secret-00000000000000000001",
         "rol": "admin",
         "email": "admin@example.test",
     }))
     usuario = client.get("/auth/me", headers=headers).json()
     assert usuario["rol"] == "coordinador"
     assert usuario["email"] != "admin@example.test"
+    identidad = db.get(Usuario, usuario["id"])
+    assert usuario["email"] != f"{identidad.demo_visitor_id}@demo.anisa.test"
+    assert identidad.demo_secret_hash
+    assert identidad.demo_secret_hash != "test-secret-00000000000000000001"
     pacientes = client.get("/pacientes/buscar?nombre=demo", headers=headers)
     assert pacientes.status_code == 200
     assert pacientes.json()[0]["nombre"] == "Paciente demo"
@@ -127,6 +136,33 @@ def test_mismo_visitante_reutiliza_identidad_sin_crear_usuarios(client, db, monk
     assert db.query(Usuario).count() == total
 
 
+def test_identificador_visible_no_permita_recuperar_otra_sesion(client, monkeypatch):
+    monkeypatch.setenv("PUBLIC_DEMO_ENABLED", "true")
+    assert abrir_demo(client, 3).status_code == 200
+    respuesta = client.post("/auth/demo", json={
+        "visitor_id": "00000000-0000-4000-8000-000000000003",
+        "visitor_secret": "another-secret-000000000000000000",
+    })
+    assert respuesta.status_code == 403
+
+
+def test_bd_impide_duplicar_un_identificador_demo(db):
+    usuario = {
+        "nombre": "Visitante",
+        "rol": "coordinador",
+        "password_hash": hash_password("test-password"),
+        "demo_visitor_id": "00000000000040008000000000000003",
+        "demo_secret_hash": "hash",
+    }
+    db.add_all([
+        Usuario(email="first@demo.anisa.test", **usuario),
+        Usuario(email="second@demo.anisa.test", **usuario),
+    ])
+    with pytest.raises(IntegrityError):
+        db.commit()
+    db.rollback()
+
+
 def test_limita_la_creacion_de_sesiones_demo(client, monkeypatch):
     monkeypatch.setenv("PUBLIC_DEMO_ENABLED", "true")
     monkeypatch.setenv("PUBLIC_DEMO_SESSION_LIMIT", "2")
@@ -145,3 +181,16 @@ def test_acota_las_identidades_y_revoca_la_mas_antigua(client, db, monkeypatch):
     cabeceras(abrir_demo(client, 3))
     assert db.query(Usuario).count() == 3
     assert client.get("/auth/me", headers=primera).status_code == 401
+
+
+def test_reducir_el_maximo_elimina_todos_los_visitantes_sobrantes(
+    client, db, monkeypatch
+):
+    monkeypatch.setenv("PUBLIC_DEMO_ENABLED", "true")
+    monkeypatch.setenv("PUBLIC_DEMO_MAX_USERS", "4")
+    anteriores = [cabeceras(abrir_demo(client, numero)) for numero in range(1, 5)]
+    monkeypatch.setenv("PUBLIC_DEMO_MAX_USERS", "1")
+    cabeceras(abrir_demo(client, 5))
+    assert db.query(Usuario).filter(Usuario.demo_visitor_id.is_not(None)).count() == 1
+    for headers in anteriores:
+        assert client.get("/auth/me", headers=headers).status_code == 401
