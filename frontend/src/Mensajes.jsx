@@ -31,7 +31,7 @@ export default function Mensajes() {
   }
 
   async function choose(nextPatient) {
-    setPatient(nextPatient); setLanguage(nextPatient.idioma); setResults([]); setQuery(""); setNotice(null); setBusy(true);
+    setPatient(nextPatient); setLanguage(nextPatient.idioma); setResults([]); setSearched(false); setQuery(""); setNotice(null); setHistory([]); setBusy(true);
     try { setHistory(await apiFetch(`/pacientes/${nextPatient.id}/mensajes`)); }
     catch { setNotice({ tone: "error", key: "loadError" }); }
     finally { setBusy(false); }

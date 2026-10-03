@@ -60,7 +60,7 @@ export default function Asistente() {
         {loading && <p role="status" className="muted text-sm">{t("thinking")}</p>}
       </div>
       <form onSubmit={send} className="composer">
-        <div className="composer-row"><label className="flex-1"><span className="sr-only">{t("askLabel")}</span><textarea rows={1} className="field" value={question} onChange={(e) => setQuestion(e.target.value)} placeholder={t("askPlaceholder")} dir="auto" /></label><button className="button button-primary" disabled={loading || !question.trim()}><Send size={17} aria-hidden="true" /><span>{t("sendQuestion")}</span></button></div>
+        <div className="composer-row"><label className="flex-1"><span className="sr-only">{t("askLabel")}</span><textarea rows={1} className="field" value={question} onChange={(e) => setQuestion(e.target.value)} placeholder={t("askPlaceholder")} dir="auto" /></label><button className="button button-primary" aria-label={t("sendQuestion")} disabled={loading || !question.trim()}><Send size={17} aria-hidden="true" /><span>{t("sendQuestion")}</span></button></div>
         <p className="meta">{t("assistantNote")}</p>
       </form>
     </div>
