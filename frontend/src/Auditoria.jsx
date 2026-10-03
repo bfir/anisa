@@ -1,78 +1,25 @@
-import { useState, useEffect } from "react";
-import { apiFetch } from "./apiClient";
+import { useLocale } from "./localeContext";
+import { useResource } from "./useResource";
+import { EmptyState, PageHeading, ResourceState } from "./Ui";
 
-function Auditoria() {
-  const [registros, setRegistros] = useState([]);
-  const [cargando, setCargando] = useState(true);
-  const [sinPermiso, setSinPermiso] = useState(false);
-
-  useEffect(() => {
-    apiFetch("/auditoria")
-      .then(setRegistros)
-      .catch((error) => setSinPermiso(error.status === 403))
-      .finally(() => setCargando(false));
-  }, []);
-
+export default function Auditoria() {
+  const { t, formatDate } = useLocale();
+  const resource = useResource(["/auditoria"]);
+  if (resource.loading || resource.error) return <><PageHeading title={t("audit")} description={t("auditIntro")} /><ResourceState resource={resource} /></>;
+  const records = resource.data[0];
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-2xl">Auditoría del asistente</h1>
-        <p className="text-xs text-ink-soft mt-1 max-w-2xl">
-          Cada pregunta hecha al asistente queda registrada aquí: quién la hizo, qué herramientas
-          ejecutó y qué respondió. Es un registro permanente, no solo la traza de la conversación.
-        </p>
-      </div>
-
-      {cargando && <p className="text-sm text-ink-soft">Cargando...</p>}
-      {sinPermiso && (
-        <p className="text-sm text-ink-soft">
-          Tu rol no tiene acceso al registro de auditoría.
-        </p>
-      )}
-      {!cargando && !sinPermiso && registros.length === 0 && (
-        <p className="text-sm text-ink-soft">Todavía no se ha usado el asistente.</p>
-      )}
-
-      <div className="bg-surface border border-hairline rounded-2xl divide-y divide-hairline">
-        {registros.map((r) => (
-          <div key={r.id} className="p-4 space-y-2">
-            <div className="flex justify-between items-center flex-wrap gap-2 text-xs text-ink-soft">
-              <span>
-                {r.creado_en} · {r.usuario_nombre || "usuario desconocido"}
-              </span>
-              {r.pasos.length > 0 && (
-                <span>
-                  {r.pasos.length} herramienta(s){" "}
-                  {r.pasos.some((p) => p.error) && (
-                    <span className="text-red-ink font-medium">· con errores</span>
-                  )}
-                </span>
-              )}
-            </div>
-            <p className="text-sm font-medium">{r.pregunta}</p>
-            <p className="text-sm text-ink-soft">{r.respuesta}</p>
-            {r.pasos.length > 0 && (
-              <details className="text-xs text-ink-soft">
-                <summary className="cursor-pointer">Ver herramientas ejecutadas</summary>
-                <ul className="mt-1 space-y-1">
-                  {r.pasos.map((paso, i) => (
-                    <li key={i}>
-                      🔧 <strong>{paso.herramienta}</strong>({JSON.stringify(paso.argumentos)})
-                      {paso.error ? (
-                        <span className="text-red-ink"> → error: {paso.error}</span>
-                      ) : (
-                        <span> → {JSON.stringify(paso.resultado)}</span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            )}
-          </div>
+    <>
+      <PageHeading title={t("audit")} description={t("auditIntro")} />
+      <section className="panel">
+        {records.length === 0 ? <EmptyState>{t("noAudit")}</EmptyState> : records.map((record) => (
+          <article key={record.id} className="audit-entry">
+            <p className="meta">{formatDate(record.creado_en)} · {record.usuario_nombre || t("unknownUser")}</p>
+            <h2 className="mt-2" dir="auto">{record.pregunta}</h2>
+            <p className="chat-text muted" dir="auto">{record.respuesta}</p>
+            {record.pasos.length > 0 && <details className="tool-details"><summary>{t("toolSteps", { count: record.pasos.length })}</summary><ul>{record.pasos.map((step, index) => <li key={index}><strong>{step.herramienta}</strong>{step.error && <span className="text-red-ink"> · {t("toolError")}</span>}</li>)}</ul></details>}
+          </article>
         ))}
-      </div>
-    </div>
+      </section>
+    </>
   );
 }
-
-export default Auditoria;

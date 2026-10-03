@@ -1,6 +1,10 @@
 import { useState } from "react";
-import { Routes, Route } from "react-router-dom";
-import { getToken, login, logout } from "./apiClient";
+import { Routes, Route, Link } from "react-router-dom";
+import { ArrowRight } from "lucide-react";
+import { getToken, login } from "./apiClient";
+import { useLocale } from "./localeContext";
+import LanguageSelector from "./LanguageSelector";
+import { Brand, Notice, PageHeading } from "./Ui";
 import Inicio from "./Inicio";
 import Asistente from "./Asistente";
 import Mensajes from "./Mensajes";
@@ -13,61 +17,61 @@ import Auditoria from "./Auditoria";
 import Layout from "./Layout";
 
 function App() {
+  const { t } = useLocale();
   const [token, setToken] = useState(getToken());
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   async function manejarLogin(evento) {
     evento.preventDefault();
-    setError("");
+    if (loading) return;
+    setError(null);
+    setLoading(true);
     try {
       await login(email, password);
       setToken(getToken());
     } catch (err) {
-      setError(err.message);
+      setError(err.status === 401 ? "invalidLogin" : "loginError");
+    } finally {
+      setLoading(false);
     }
   }
 
-  if (!token) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-bg">
-        <form
-          onSubmit={manejarLogin}
-          className="bg-surface p-8 rounded-2xl border border-hairline w-full max-w-sm space-y-4"
-        >
-          <h1 className="font-display text-2xl">Anisa</h1>
-          <p className="text-ink-soft text-sm">
-            Panel del equipo de Atención al Paciente Internacional
-          </p>
-
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full border border-hairline rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent"
-          />
-          <input
-            type="password"
-            placeholder="Contraseña"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full border border-hairline rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent"
-          />
-
-          {error && <p className="text-red-ink text-sm">{error}</p>}
-
-          <button
-            type="submit"
-            className="w-full bg-accent text-white rounded-lg py-2 font-medium hover:opacity-90 transition"
-          >
-            Entrar
-          </button>
+  if (!token) return (
+    <div className="login-shell">
+      <section className="login-story">
+        <Brand />
+        <div><h1>{t("loginTitle")}</h1><p>{t("loginIntro")}</p></div>
+        <p className="meta">{t("demoNote")}</p>
+      </section>
+      <div className="login-form-area">
+        <div className="login-toolbar"><Brand /><LanguageSelector /></div>
+        <form onSubmit={manejarLogin} className="login-form" aria-busy={loading}>
+          <h2>{t("signIn")}</h2>
+          <p className="muted">{t("signInIntro")}</p>
+          <div className="login-fields">
+            <div>
+              <label className="field-label" htmlFor="login-email">{t("email")}</label>
+              <input id="login-email" type="email" autoComplete="username" required dir="ltr"
+                value={email} onChange={(e) => setEmail(e.target.value)} className="field" />
+            </div>
+            <div>
+              <label className="field-label" htmlFor="login-password">{t("password")}</label>
+              <input id="login-password" type="password" autoComplete="current-password" required
+                value={password} onChange={(e) => setPassword(e.target.value)} className="field" />
+            </div>
+            {error && <Notice>{t(error)}</Notice>}
+            <button type="submit" disabled={loading} className="button button-primary">
+              {t(loading ? "signingIn" : "signIn")}<ArrowRight className="direction-arrow" size={16} aria-hidden="true" />
+            </button>
+            {loading && <p role="status" className="meta">{t("coldStart")}</p>}
+          </div>
         </form>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
     <Layout>
@@ -81,6 +85,7 @@ function App() {
         <Route path="/informes" element={<Informes />} />
         <Route path="/auditoria" element={<Auditoria />} />
         <Route path="/ajustes" element={<Ajustes />} />
+        <Route path="*" element={<><PageHeading title={t("notFound")} /><Link className="button button-primary" to="/">{t("goHome")}</Link></>} />
       </Routes>
     </Layout>
   );

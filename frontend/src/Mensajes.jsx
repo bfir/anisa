@@ -1,173 +1,88 @@
 import { useState } from "react";
 import { Search, Send } from "lucide-react";
 import { apiFetch } from "./apiClient";
+import { useLocale } from "./localeContext";
+import { patientLanguages } from "./translations";
+import { EmptyState, MessageHistory, Notice, PageHeading } from "./Ui";
 
-const IDIOMAS = ["es", "en", "ar", "fr"];
-const NOMBRE_IDIOMA = { es: "Español", en: "English", ar: "العربية", fr: "Français" };
+export default function Mensajes() {
+  const { t } = useLocale();
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [patient, setPatient] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [type, setType] = useState("informativo");
+  const [language, setLanguage] = useState("es");
+  const [text, setText] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [notice, setNotice] = useState(null);
+  const [searched, setSearched] = useState(false);
+  const busy = searching || loadingHistory || sending;
 
-function Mensajes() {
-  const [busqueda, setBusqueda] = useState("");
-  const [resultados, setResultados] = useState([]);
-  const [paciente, setPaciente] = useState(null);
-  const [historial, setHistorial] = useState([]);
-
-  const [tipo, setTipo] = useState("informativo");
-  const [idioma, setIdioma] = useState("es");
-  const [texto, setTexto] = useState("");
-  const [enviando, setEnviando] = useState(false);
-  const [aviso, setAviso] = useState(null);
-
-  async function buscar(evento) {
-    evento.preventDefault();
-    const datos = await apiFetch(`/pacientes/buscar?nombre=${encodeURIComponent(busqueda)}`);
-    setResultados(datos);
-  }
-
-  async function elegirPaciente(p) {
-    setPaciente(p);
-    setResultados([]);
-    setBusqueda("");
-    setIdioma(p.idioma); // por defecto, el idioma real del paciente
-    setAviso(null);
-    const mensajes = await apiFetch(`/pacientes/${p.id}/mensajes`);
-    setHistorial(mensajes);
-  }
-
-  async function enviar(evento) {
-    evento.preventDefault();
-    if (!texto.trim()) return;
-    setEnviando(true);
-    setAviso(null);
+  async function search(event) {
+    event.preventDefault();
+    if (!query.trim() || busy) return;
+    setSearching(true); setNotice(null); setSearched(false);
     try {
-      const mensaje = await apiFetch("/mensajes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paciente_id: paciente.id, tipo, idioma, texto }),
-      });
-      setHistorial((h) => [mensaje, ...h]);
-      setTexto("");
-      setAviso(
-        mensaje.estado_envio === "enviado"
-          ? "Mensaje enviado correctamente."
-          : "Se guardó, pero el envío del correo falló."
-      );
+      setResults(await apiFetch(`/pacientes/buscar?nombre=${encodeURIComponent(query.trim())}`));
+      setSearched(true);
     } catch {
-      setAviso("No se pudo enviar el mensaje.");
-    } finally {
-      setEnviando(false);
-    }
+      setNotice({ tone: "error", key: "loadError" });
+    } finally { setSearching(false); }
+  }
+
+  async function choose(nextPatient) {
+    setPatient(nextPatient); setLanguage(nextPatient.idioma); setResults([]); setSearched(false); setQuery(""); setNotice(null); setHistory([]); setLoadingHistory(true);
+    try { setHistory(await apiFetch(`/pacientes/${nextPatient.id}/mensajes`)); }
+    catch { setNotice({ tone: "error", key: "loadError" }); }
+    finally { setLoadingHistory(false); }
+  }
+
+  async function send(event) {
+    event.preventDefault();
+    if (!text.trim() || busy) return;
+    setSending(true); setNotice(null);
+    try {
+      const message = await apiFetch("/mensajes", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paciente_id: patient.id, tipo: type, idioma: language, texto: text.trim() }),
+      });
+      setHistory((items) => [message, ...items]); setText("");
+      setNotice({ tone: message.estado_envio === "enviado" ? "success" : "warning", key: message.estado_envio === "enviado" ? "sentSuccessfully" : "savedEmailFailed" });
+    } catch {
+      setNotice({ tone: "error", key: "messageError" });
+      try { setHistory(await apiFetch(`/pacientes/${patient.id}/mensajes`)); } catch { /* Existing history remains visible. */ }
+    } finally { setSending(false); }
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <h1 className="font-display text-2xl">Mensajes</h1>
-
-      <form onSubmit={buscar} className="flex gap-2">
-        <div className="relative flex-1">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft" />
-          <input
-            type="text"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar paciente por nombre..."
-            className="w-full border border-hairline rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent"
-          />
-        </div>
-        <button className="bg-accent text-white px-4 py-2 rounded-lg font-medium hover:opacity-90 transition">
-          Buscar
-        </button>
+    <div className="max-w-4xl mx-auto">
+      <PageHeading title={t("messages")} description={t("messageIntro")} />
+      <form onSubmit={search} className="search-form">
+        <label className="search-input"><span className="field-label">{t("searchName")}</span><Search size={17} aria-hidden="true" /><input className="field" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("searchPlaceholder")} /></label>
+        <button className="button button-primary" disabled={busy || !query.trim()}>{t(searching ? "searching" : "search")}</button>
       </form>
-
-      {resultados.length > 0 && (
-        <div className="bg-surface border border-hairline rounded-2xl divide-y divide-hairline">
-          {resultados.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => elegirPaciente(p)}
-              className="w-full text-left px-4 py-2 hover:bg-bg"
-            >
-              <p className="font-medium">{p.nombre}</p>
-              <p className="text-xs text-ink-soft">
-                {p.pais} · {NOMBRE_IDIOMA[p.idioma] || p.idioma}
-              </p>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {paciente && (
-        <div className="bg-surface border border-hairline rounded-2xl p-4 space-y-4">
-          <div>
-            <h2 className="font-display text-lg">{paciente.nombre}</h2>
-            <p className="text-xs text-ink-soft">
-              Idioma habitual: {NOMBRE_IDIOMA[paciente.idioma] || paciente.idioma}
-            </p>
-          </div>
-
-          <form onSubmit={enviar} className="space-y-3">
-            <div className="flex gap-3">
-              <select
-                value={tipo}
-                onChange={(e) => setTipo(e.target.value)}
-                className="border border-hairline rounded-lg px-3 py-2 text-sm"
-              >
-                <option value="recordatorio_cita">Recordatorio de cita</option>
-                <option value="pago_pendiente">Pago pendiente</option>
-                <option value="informativo">Informativo</option>
-              </select>
-              <select
-                value={idioma}
-                onChange={(e) => setIdioma(e.target.value)}
-                className="border border-hairline rounded-lg px-3 py-2 text-sm"
-              >
-                {IDIOMAS.map((codigo) => (
-                  <option key={codigo} value={codigo}>
-                    {NOMBRE_IDIOMA[codigo]}
-                  </option>
-                ))}
-              </select>
+      {notice && <div className="mb-5"><Notice tone={notice.tone}>{t(notice.key)}</Notice></div>}
+      {searched && results.length === 0 && <EmptyState>{t("noResults")}</EmptyState>}
+      {results.length > 0 && <section className="panel mb-6">{results.map((result) => (
+        <button key={result.id} disabled={busy} onClick={() => choose(result)} className="patient-choice"><span className="min-w-0"><span className="block font-semibold">{result.nombre}</span><span className="block meta">{result.pais} · <bdi>{patientLanguages[result.idioma] ?? result.idioma}</bdi></span></span></button>
+      ))}</section>}
+      {patient && (
+        <section className="panel">
+          <div className="panel-heading"><div><h2>{patient.nombre}</h2><p className="meta">{t("usualLanguage")}: <bdi>{patientLanguages[patient.idioma] ?? patient.idioma}</bdi></p></div></div>
+          <form onSubmit={send} className="panel-body space-y-4">
+            <div className="grid sm:grid-cols-2 gap-4">
+              <label><span className="field-label">{t("messageType")}</span><select className="field" value={type} onChange={(e) => setType(e.target.value)}><option value="recordatorio_cita">{t("appointmentReminder")}</option><option value="pago_pendiente">{t("paymentReminder")}</option><option value="informativo">{t("informational")}</option></select></label>
+              <label><span className="field-label">{t("language")}</span><select className="field" value={language} onChange={(e) => setLanguage(e.target.value)}>{Object.entries(patientLanguages).map(([code, name]) => <option key={code} value={code} lang={code}>{name}</option>)}</select></label>
             </div>
-            <textarea
-              value={texto}
-              onChange={(e) => setTexto(e.target.value)}
-              placeholder="Escribe el mensaje..."
-              rows={3}
-              dir={idioma === "ar" ? "rtl" : "ltr"}
-              className="w-full border border-hairline rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent"
-            />
-            <button
-              type="submit"
-              disabled={enviando}
-              className="flex items-center gap-2 bg-accent text-white px-4 py-2 rounded-lg font-medium hover:opacity-90 transition disabled:opacity-50"
-            >
-              <Send size={16} /> {enviando ? "Enviando..." : "Enviar mensaje"}
-            </button>
-            {aviso && <p className="text-sm text-ink-soft">{aviso}</p>}
+            <label><span className="field-label">{t("messageBody")}</span><textarea className="field" rows={5} value={text} onChange={(e) => setText(e.target.value)} placeholder={t("messagePlaceholder")} dir={language === "ar" ? "rtl" : "ltr"} lang={language} /></label>
+            <button className="button button-primary" disabled={busy || !text.trim()}><Send size={16} aria-hidden="true" />{t(sending ? "sending" : "sendMessage")}</button>
           </form>
-
-          <div>
-            <p className="text-xs font-semibold tracking-widest text-ink-soft mb-2">
-              HISTORIAL
-            </p>
-            {historial.length === 0 && (
-              <p className="text-sm text-ink-soft">Sin mensajes todavía.</p>
-            )}
-            <div className="space-y-2">
-              {historial.map((m) => (
-                <div key={m.id} className="border-t border-hairline pt-2">
-                  <p className="text-sm">{m.texto}</p>
-                  <p className="text-xs text-ink-soft">
-                    {m.enviado_en} · {NOMBRE_IDIOMA[m.idioma] || m.idioma} ·{" "}
-                    {m.estado_envio === "enviado" ? "Enviado" : "Fallido"}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+          <div className="panel-body"><h3 className="mb-2">{t("history")}</h3>{loadingHistory ? <p role="status" className="muted text-sm">{t("loading")}</p> : <MessageHistory messages={history} />}</div>
+        </section>
       )}
     </div>
   );
 }
-
-export default Mensajes;
