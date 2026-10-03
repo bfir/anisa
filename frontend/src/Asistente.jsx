@@ -29,7 +29,7 @@ export default function Asistente() {
   const [deciding, setDeciding] = useState(null);
   const [actionError, setActionError] = useState(null);
   const pending = useResource(["/agente/acciones"]);
-  const canAsk = !pending.loading && pending.error?.status !== 403;
+  const canAsk = !pending.loading && !pending.error;
   const proposals = [...new Map([...(pending.data?.[0] ?? []), ...actions].map((action) => [action.id, action])).values()];
   const prompts = ["questionPayments", "questionAppointments", "questionDocs"];
 
