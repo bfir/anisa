@@ -38,7 +38,11 @@ async function crearSesionDemo() {
       body: JSON.stringify({ visitor_id: visitorId }),
       signal: AbortSignal.timeout(90_000),
     });
-    if (!demo.ok) throw new Error("Could not start demo session");
+    if (!demo.ok) {
+      const error = new Error("Could not start demo session");
+      error.status = demo.status;
+      throw error;
+    }
     const datos = await demo.json();
     if (typeof datos.access_token !== "string" || !datos.access_token) {
       throw new Error("Invalid demo session");

@@ -21,7 +21,7 @@ function App() {
   const teamAccess = new URLSearchParams(window.location.search).get("acceso") === "equipo";
   const [session, setSession] = useState(null);
   const [attempt, setAttempt] = useState(0);
-  const [startupError, setStartupError] = useState(false);
+  const [startupError, setStartupError] = useState(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
@@ -31,7 +31,9 @@ function App() {
     let active = true;
     initializeSession({ teamAccess })
       .then((result) => { if (active) setSession(result); })
-      .catch(() => { if (active) setStartupError(true); });
+      .catch((error) => {
+        if (active) setStartupError(error.status === 429 ? "demoRateLimit" : "loginError");
+      });
     return () => { active = false; };
   }, [attempt, teamAccess]);
 
@@ -66,9 +68,9 @@ function App() {
             <p className="muted">{t("coldStart")}</p>
             {startupError ? (
               <div className="login-fields">
-                <Notice>{t("loginError")}</Notice>
+                <Notice>{t(startupError)}</Notice>
                 <button type="button" className="button button-primary" onClick={() => {
-                  setStartupError(false);
+                  setStartupError(null);
                   setAttempt((value) => value + 1);
                 }}>{t("retry")}</button>
               </div>

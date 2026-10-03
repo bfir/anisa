@@ -105,3 +105,9 @@ test("el acceso del equipo descarta la sesión demo y muestra el login", async (
   assert.equal(getToken(), null);
   assert.equal(fetch.mock.callCount(), 1);
 });
+
+test("el límite demo se comunica con su estado HTTP para explicar el reintento", async () => {
+  fetch.mock.mockImplementation(async (url) => url.endsWith("/auth/config")
+    ? json({ public_demo: true }) : json({ detail: "Rate limit" }, 429));
+  await assert.rejects(initializeSession(), (error) => error.status === 429);
+});
