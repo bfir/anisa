@@ -1,3 +1,6 @@
+from secrets import token_urlsafe
+from uuid import uuid4
+
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -11,13 +14,14 @@ from api.database import get_db
 from api.modelos import (
     Paciente, Cita, Pago, MensajeNuevo, Mensaje,
     PreguntaAgente, RespuestaAgente, CitaActualizar, RegistroAuditoria,
-    AccionPropuesta, DecisionAccion,
+    AccionPropuesta, DecisionAccion, ConfiguracionAcceso,
 )
 
 from fastapi.security import OAuth2PasswordRequestForm
 
 from api.auth import (
-    create_access_token, get_current_user, puede_actuar, puede_auditar, verify_password,
+    create_access_token, get_current_user, hash_password,
+    puede_actuar, puede_auditar, public_demo_enabled, verify_password,
 )
 from api.modelos import Token, UsuarioOut
 from api.models_orm import Usuario
@@ -134,6 +138,27 @@ def obtener_paciente(paciente_id: int, db: Session = Depends(get_db), usuario: U
     if paciente is None:
         raise HTTPException(status_code=404, detail="Paciente no encontrado")
     return paciente
+
+@app.get("/auth/config", response_model=ConfiguracionAcceso)
+def configuracion_acceso():
+    return {"public_demo": public_demo_enabled()}
+
+
+@app.post("/auth/demo", response_model=Token)
+def acceder_demo(db: Session = Depends(get_db)):
+    if not public_demo_enabled():
+        raise HTTPException(status_code=403, detail="La demo pública está desactivada")
+    usuario = Usuario(
+        nombre="Visitante",
+        email=f"{uuid4().hex}@demo.anisa.test",
+        rol="coordinador",
+        password_hash=hash_password(token_urlsafe(32)),
+    )
+    db.add(usuario)
+    db.commit()
+    token = create_access_token(usuario.email, demo=True)
+    return {"access_token": token, "token_type": "bearer"}
+
 
 @app.post("/auth/login", response_model=Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):

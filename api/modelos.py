@@ -111,6 +111,10 @@ class Token(BaseModel):
     token_type: str
 
 
+class ConfiguracionAcceso(BaseModel):
+    public_demo: bool
+
+
 class UsuarioOut(BaseModel):
     id: int
     nombre: str

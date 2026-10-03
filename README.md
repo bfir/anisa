@@ -18,10 +18,41 @@ detectar pagos pendientes y preparar y enviar recordatorios en el idioma de cada
 > La API está en el plan gratuito de Render y "duerme" tras un rato de inactividad — la
 > primera petición puede tardar ~50 segundos en responder mientras arranca.
 
-Credenciales de prueba: `admin@anisa.dev` / `admin123` (o `coordinador@anisa.dev` / `coord123`).
+Con `PUBLIC_DEMO_ENABLED=true` en la API, el panel abre directamente sin introducir
+correo ni contraseña. Cada navegador recibe automáticamente una identidad de visitante
+con rol `coordinador`; no se publican contraseñas en el frontend.
 
-Ambos roles pueden usar el asistente, enviar mensajes y modificar citas; el registro de
-auditoría es exclusivo de `admin`.
+En modo privado (el predeterminado), se conserva el formulario. Credenciales de prueba
+para una base con datos sintéticos: `admin@anisa.dev` / `admin123`
+(o `coordinador@anisa.dev` / `coord123`).
+
+Ambos roles pueden usar el asistente, enviar mensajes y modificar citas. Los visitantes
+también pueden probar estos flujos; las acciones propuestas por el asistente siguen
+requiriendo aprobación y pertenecen al visitante que las creó. La auditoría es exclusiva
+de `admin`.
+
+### Activar el acceso público en el despliegue
+
+1. Desplegar en Render la versión de la API que incluye `/auth/config` y `/auth/demo`.
+2. En Render → servicio de Anisa → Environment, añadir `PUBLIC_DEMO_ENABLED=true`
+   y guardar con despliegue.
+3. Desplegar en Vercel esta versión del frontend. `VITE_API_URL` debe apuntar a esa API;
+   no hace falta ninguna variable adicional en Vercel.
+
+El frontend consulta `GET /auth/config` al arrancar y, si no hay token guardado, abre
+una sesión con `POST /auth/demo`. El JWT se conserva en `localStorage` durante las
+visitas posteriores y caduca a las 24 horas, igual que las sesiones normales. Un fallo
+de conexión muestra un reintento; la API gratuita puede tardar en despertar.
+
+Este modo está pensado para la **demo con datos sintéticos**. Los pacientes, citas,
+pagos y mensajes se comparten entre visitantes, incluidos los cambios. Las propuestas
+tienen propietarios independientes. Las identidades de visitante se guardan en
+`usuarios` para conservar las referencias de auditoría; no se eliminan automáticamente.
+Los correos siguen dirigidos exclusivamente a `EMAIL_DEMO_DESTINO`, el buzón de pruebas.
+
+Para volver al acceso privado, establecer `PUBLIC_DEMO_ENABLED=false` y redesplegar
+la API. Los tokens demo dejan de ser válidos, incluso antes de su caducidad, y el
+frontend vuelve al formulario al recargar. Los tokens del equipo conservan su validez.
 
 ---
 
@@ -48,8 +79,8 @@ Todo repartido entre varias herramientas y hojas de cálculo, y con tiempos de r
   una pregunta en lenguaje natural, mostrando qué herramientas usó.
 - **Auditoría persistida** — cada pregunta al asistente, quién la hizo, qué herramientas
   ejecutó y qué respondió queda guardado en base de datos, no solo en la respuesta HTTP.
-- **Login con JWT** — cada usuario del equipo inicia sesión y todas las rutas de la API
-  requieren su token.
+- **Acceso con JWT** — sesión automática de visitante en la demo pública o login del
+  equipo en modo privado. Las rutas de datos conservan sus controles de token y rol.
 - **Consulta de documentación de aseguradoras (RAG)** — el asistente puede buscar en políticas
   de cobertura, documentación requerida y preautorización de 7 aseguradoras, citando siempre
   el documento y la sección de origen. Ver [RAG sobre documentación](#rag-sobre-documentación-de-aseguradoras).
@@ -114,7 +145,10 @@ GROQ_API_KEY=tu_clave
 SECRET_KEY=una_cadena_aleatoria_larga
 RESEND_API_KEY=tu_clave
 EMAIL_DEMO_DESTINO=tu_email_de_pruebas
+PUBLIC_DEMO_ENABLED=false
 ```
+
+Usa `PUBLIC_DEMO_ENABLED=true` si quieres probar en local la entrada sin contraseña.
 
 Aplica las migraciones (crea/actualiza las tablas en tu base):
 ```powershell
@@ -167,6 +201,21 @@ npm run dev
 ```
 
 El panel estará en `http://localhost:5173`.
+
+### Verificar el acceso y las aprobaciones
+
+```powershell
+python -m pytest tests/test_acceso_demo.py tests/test_aprobaciones.py tests/test_agente_idioma.py
+cd frontend
+npm test
+npm run lint
+npm run build
+```
+
+Estas pruebas comprueban el acceso privado y público, permisos, revocación de tokens
+demo, separación de propuestas entre visitantes y reintentos del cliente. Usan una
+base SQLite en memoria y no necesitan llamadas reales a Groq, Cohere ni Resend.
+La evaluación RAG sigue siendo una prueba de integración aparte con proveedores.
 
 ## RAG sobre documentación de aseguradoras
 

@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Routes, Route, Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
-import { getToken, login } from "./apiClient";
+import { getToken, initializeSession, login } from "./apiClient";
 import { useLocale } from "./localeContext";
 import LanguageSelector from "./LanguageSelector";
 import { Brand, Notice, PageHeading } from "./Ui";
@@ -18,11 +18,21 @@ import Layout from "./Layout";
 
 function App() {
   const { t } = useLocale();
-  const [token, setToken] = useState(getToken());
+  const [session, setSession] = useState(null);
+  const [attempt, setAttempt] = useState(0);
+  const [startupError, setStartupError] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    initializeSession()
+      .then((result) => { if (active) setSession(result); })
+      .catch(() => { if (active) setStartupError(true); });
+    return () => { active = false; };
+  }, [attempt]);
 
   async function manejarLogin(evento) {
     evento.preventDefault();
@@ -31,7 +41,7 @@ function App() {
     setLoading(true);
     try {
       await login(email, password);
-      setToken(getToken());
+      setSession({ ...session, token: getToken() });
     } catch (err) {
       setError(err.status === 401 ? "invalidLogin" : "loginError");
     } finally {
@@ -39,7 +49,7 @@ function App() {
     }
   }
 
-  if (!token) return (
+  if (!session?.token) return (
     <div className="login-shell">
       <section className="login-story">
         <Brand />
@@ -48,7 +58,21 @@ function App() {
       </section>
       <div className="login-form-area">
         <div className="login-toolbar"><Brand /><LanguageSelector /></div>
-        <form onSubmit={manejarLogin} className="login-form" aria-busy={loading}>
+        {!session ? (
+          <section className="login-form" aria-busy={!startupError}>
+            <h2>{t("openingWorkspace")}</h2>
+            <p className="muted">{t("coldStart")}</p>
+            {startupError ? (
+              <div className="login-fields">
+                <Notice>{t("loginError")}</Notice>
+                <button type="button" className="button button-primary" onClick={() => {
+                  setStartupError(false);
+                  setAttempt((value) => value + 1);
+                }}>{t("retry")}</button>
+              </div>
+            ) : <p role="status" className="meta mt-4">{t("connecting")}</p>}
+          </section>
+        ) : <form onSubmit={manejarLogin} className="login-form" aria-busy={loading}>
           <h2>{t("signIn")}</h2>
           <p className="muted">{t("signInIntro")}</p>
           <div className="login-fields">
@@ -68,7 +92,7 @@ function App() {
             </button>
             {loading && <p role="status" className="meta">{t("coldStart")}</p>}
           </div>
-        </form>
+        </form>}
       </div>
     </div>
   );
@@ -84,7 +108,7 @@ function App() {
         <Route path="/pagos" element={<Pagos />} />
         <Route path="/informes" element={<Informes />} />
         <Route path="/auditoria" element={<Auditoria />} />
-        <Route path="/ajustes" element={<Ajustes />} />
+        <Route path="/ajustes" element={<Ajustes publicDemo={session.publicDemo} />} />
         <Route path="*" element={<><PageHeading title={t("notFound")} /><Link className="button button-primary" to="/">{t("goHome")}</Link></>} />
       </Routes>
     </Layout>
