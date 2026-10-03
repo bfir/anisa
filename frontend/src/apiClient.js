@@ -20,7 +20,9 @@ export async function login(email, password) {
   });
 
   if (!respuesta.ok) {
-    throw new Error("Email o contraseña incorrectos");
+    const error = new Error("Login failed");
+    error.status = respuesta.status;
+    throw error;
   }
   const datos = await respuesta.json();
   localStorage.setItem("token", datos.access_token);

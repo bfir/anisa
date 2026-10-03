@@ -43,11 +43,13 @@ class Mensaje(MensajeNuevo):
     
 class PreguntaAgente(BaseModel):
     pregunta: str
+    idioma: Literal["es", "en", "ar", "fr"] = "es"
 
 
 class RespuestaAgente(BaseModel):
     respuesta: str
     pasos: list[dict]
+    error: bool = False
 
 
 class RegistroAuditoria(BaseModel):

@@ -76,9 +76,24 @@ def mensajes_de_paciente(paciente_id: int, db: Session = Depends(get_db), usuari
 
 @app.post("/agente", response_model=RespuestaAgente)
 def preguntar_al_agente(cuerpo: PreguntaAgente, db: Session = Depends(get_db), usuario: Usuario = Depends(puede_actuar)):
-    respuesta, pasos = agente.preguntar(cuerpo.pregunta, db)
-    db_module.registrar_auditoria(db, usuario.id, cuerpo.pregunta, respuesta, pasos)
-    return {"respuesta": respuesta, "pasos": pasos}
+    error = False
+    try:
+        respuesta, pasos = agente.preguntar(cuerpo.pregunta, db, idioma=cuerpo.idioma)
+    except agente.ErrorAgente as excepcion:
+        respuesta = str(excepcion)
+        pasos = excepcion.pasos
+        error = True
+
+    if any(paso["error"] for paso in pasos):
+        error = True
+
+    try:
+        db_module.registrar_auditoria(db, usuario.id, cuerpo.pregunta, respuesta, pasos)
+    except Exception:
+        db.rollback()
+        error = True
+
+    return {"respuesta": respuesta, "pasos": pasos, "error": error}
 
 
 @app.get("/auditoria", response_model=list[RegistroAuditoria])

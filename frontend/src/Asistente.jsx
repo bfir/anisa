@@ -1,97 +1,68 @@
 import { useState } from "react";
-import { Send } from "lucide-react";
+import { ArrowRight, Send } from "lucide-react";
 import { apiFetch } from "./apiClient";
+import { useLocale } from "./localeContext";
+import { Brand } from "./Ui";
 
-function Asistente() {
-  const [historial, setHistorial] = useState([]);
-  const [pregunta, setPregunta] = useState("");
-  const [cargando, setCargando] = useState(false);
+function inlineMarkdown(text) {
+  return text.split(/(\*\*[^*\n]+\*\*|\*[^*\s][^*\n]*?\*|_[^_\s][^_\n]*?_)/g).map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) return <strong key={index}>{part.slice(2, -2)}</strong>;
+    if ((part.startsWith("*") && part.endsWith("*")) || (part.startsWith("_") && part.endsWith("_"))) return <em key={index}>{part.slice(1, -1)}</em>;
+    return part;
+  });
+}
 
-  async function enviar(evento) {
-    evento.preventDefault();
-    if (!pregunta.trim() || cargando) return;
+function AssistantText({ text }) {
+  return text.split("\n").map((line, index) => <span className="block min-h-[1lh]" dir="auto" key={index}>{inlineMarkdown(line)}</span>);
+}
 
-    const miPregunta = pregunta;
-    setHistorial((h) => [...h, { rol: "usuario", texto: miPregunta }]);
-    setPregunta("");
-    setCargando(true);
+export default function Asistente() {
+  const { t, language } = useLocale();
+  const [history, setHistory] = useState([]);
+  const [question, setQuestion] = useState("");
+  const [loading, setLoading] = useState(false);
+  const prompts = ["questionPayments", "questionAppointments", "questionDocs"];
 
+  async function send(event, suggestion) {
+    event?.preventDefault();
+    const nextQuestion = (suggestion ?? question).trim();
+    if (!nextQuestion || loading) return;
+    setHistory((items) => [...items, { role: "user", text: nextQuestion }]); setQuestion(""); setLoading(true);
     try {
-      const respuesta = await apiFetch("/agente", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pregunta: miPregunta }),
+      const response = await apiFetch("/agente", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pregunta: nextQuestion, idioma: language }),
       });
-      setHistorial((h) => [
-        ...h,
-        { rol: "asistente", texto: respuesta.respuesta, pasos: respuesta.pasos },
-      ]);
-    } catch (error) {
-      setHistorial((h) => [
-        ...h,
-        { rol: "asistente", texto: "No he podido procesar la pregunta. Inténtalo de nuevo." },
-      ]);
-    } finally {
-      setCargando(false);
-    }
+      setHistory((items) => [...items, {
+        role: "assistant", text: response.respuesta, steps: response.pasos,
+        error: response.error || response.pasos?.some((step) => step.error),
+      }]);
+    } catch {
+      setHistory((items) => [...items, { role: "assistant", text: t("assistantError"), error: true }]);
+    } finally { setLoading(false); }
   }
 
   return (
-    <div className="max-w-2xl mx-auto flex flex-col h-[calc(100vh-4rem)]">
-      <h1 className="font-display text-2xl mb-4">Asistente Anisa</h1>
-
-      <div className="flex-1 overflow-auto space-y-4 pr-1">
-        {historial.length === 0 && (
-          <p className="text-ink-soft text-sm">
-            Pregúntale algo, por ejemplo: "¿qué pagos están pendientes?"
-          </p>
+    <div className="assistant-page">
+      <div className="conversation" aria-live="polite">
+        {history.length === 0 && (
+          <section className="assistant-welcome">
+            <Brand /><h2>{t("assistantTitle")}</h2><p>{t("assistantSummary")}</p>
+            <div className="prompt-list">{prompts.map((key) => <button className="prompt-choice" key={key} onClick={() => send(null, t(key))}><span>{t(key)}</span><ArrowRight className="direction-arrow shrink-0" size={16} aria-hidden="true" /></button>)}</div>
+          </section>
         )}
-        {historial.map((turno, i) => (
-          <div key={i} className={turno.rol === "usuario" ? "text-right" : ""}>
-            <div
-              className={`inline-block rounded-2xl px-4 py-2 max-w-[85%] text-sm text-left ${
-                turno.rol === "usuario"
-                  ? "bg-accent text-white"
-                  : "bg-surface border border-hairline"
-              }`}
-            >
-              {turno.texto}
-            </div>
-            {turno.pasos && turno.pasos.length > 0 && (
-              <details className="text-xs text-ink-soft mt-1 text-left">
-                <summary className="cursor-pointer">Ver {turno.pasos.length} paso(s)</summary>
-                <ul className="mt-1 space-y-1">
-                  {turno.pasos.map((paso, j) => (
-                    <li key={j}>
-                      🔧 <strong>{paso.herramienta}</strong>({JSON.stringify(paso.argumentos)})
-                      {paso.error && <span className="text-red-ink"> · falló: {paso.error}</span>}
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            )}
-          </div>
+        {history.map((turn, index) => (
+          <article key={index} className={`chat-turn chat-${turn.role}${turn.error ? " error" : ""}`}>
+            <div className="chat-text" lang={turn.role === "assistant" ? language : undefined}><AssistantText text={turn.text} /></div>
+            {turn.steps?.length > 0 && <details className="tool-details"><summary>{t("toolSteps", { count: turn.steps.length })}</summary><ul>{turn.steps.map((step, stepIndex) => <li key={stepIndex}><strong>{step.herramienta}</strong>{step.error && <span className="text-red-ink"> · {t("toolError")}</span>}</li>)}</ul></details>}
+          </article>
         ))}
-        {cargando && <p className="text-ink-soft text-sm">Anisa está pensando...</p>}
+        {loading && <p role="status" className="muted text-sm">{t("thinking")}</p>}
       </div>
-
-      <form onSubmit={enviar} className="flex gap-2 pt-4 border-t border-hairline mt-4">
-        <input
-          type="text"
-          value={pregunta}
-          onChange={(e) => setPregunta(e.target.value)}
-          placeholder="Pregunta al asistente..."
-          className="flex-1 border border-hairline rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent"
-        />
-        <button
-          type="submit"
-          className="bg-accent text-white px-4 py-2 rounded-lg hover:opacity-90 transition"
-        >
-          <Send size={16} />
-        </button>
+      <form onSubmit={send} className="composer">
+        <div className="composer-row"><label className="flex-1"><span className="sr-only">{t("askLabel")}</span><textarea rows={1} className="field" value={question} onChange={(e) => setQuestion(e.target.value)} placeholder={t("askPlaceholder")} dir="auto" /></label><button className="button button-primary" disabled={loading || !question.trim()}><Send size={17} aria-hidden="true" /><span>{t("sendQuestion")}</span></button></div>
+        <p className="meta">{t("assistantNote")}</p>
       </form>
     </div>
   );
 }
-
-export default Asistente;

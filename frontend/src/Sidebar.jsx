@@ -1,79 +1,81 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
+import { useEffect, useRef } from "react";
+import { LayoutGrid, Users, Calendar, MessageSquare, CreditCard, BarChart3, Settings, Bot, ShieldCheck, Menu } from "lucide-react";
 import { useUsuario } from "./usuarioContext";
-import { LayoutGrid, Users, Calendar, MessageSquare, CreditCard, BarChart3, Settings, Plus, Bot, ShieldCheck } from "lucide-react";
+import { useLocale } from "./localeContext";
+import { Brand } from "./Ui";
 
-const enlacesGestion = [
-    { a: "/", texto: "Inicio", icono: LayoutGrid },
-    { a: "/pacientes", texto: "Pacientes", icono: Users },
-    { a: "/citas", texto: "Citas", icono: Calendar },
-    { a: "/mensajes", texto: "Mensajes", icono: MessageSquare },
-    { a: "/asistente", texto: "Asistente", icono: Bot },
+const managementLinks = [
+  { to: "/", key: "home", icon: LayoutGrid },
+  { to: "/pacientes", key: "patients", icon: Users },
+  { to: "/citas", key: "appointments", icon: Calendar },
+  { to: "/mensajes", key: "messages", icon: MessageSquare },
+  { to: "/asistente", key: "assistant", icon: Bot },
+];
+const adminLinks = [
+  { to: "/pagos", key: "payments", icon: CreditCard },
+  { to: "/informes", key: "reports", icon: BarChart3 },
+  { to: "/auditoria", key: "audit", icon: ShieldCheck, role: "admin" },
+  { to: "/ajustes", key: "settings", icon: Settings },
 ];
 
-const enlacesAdmin = [
-    { a: "/pagos", texto: "Pagos", icono: CreditCard },
-    { a: "/informes", texto: "Informes", icono:BarChart3 },
-    { a: "/auditoria", texto: "Auditoría", icono: ShieldCheck, soloRol: "admin" },
-    { a: "/ajustes", texto: "Ajustes", icono: Settings},
-];
-
-function ItemNav({ a, texto, icono: Icono}) {
-    return (
-        <NavLink
-            to={a}
-            end={a === "/"}
-            className={({ isActive}) =>
-                `flex items-center gap-3 py-2 rounded-lg text-sm font-medium ${
-                    isActive ? "bg-teal-bg text-teal-ink" : "text-ink-soft hover:bg-surface"
-                }`
-            }
-        >
-
-            <Icono size={18} />
-            {texto}
-        </NavLink>
-    );
+function NavigationLinks({ links, onNavigate }) {
+  const { t } = useLocale();
+  return links.map(({ to, key, icon: Icon }) => (
+    <NavLink key={to} to={to} end={to === "/"} onClick={onNavigate}
+      className={({ isActive }) => `nav-item${isActive ? " active" : ""}`}>
+      <Icon size={18} strokeWidth={1.8} aria-hidden="true" />{t(key)}
+    </NavLink>
+  ));
 }
 
-function Sidebar() {
-    const usuario = useUsuario();
-    const enlacesVisibles = enlacesAdmin.filter(
-        (item) => !item.soloRol || item.soloRol === usuario?.rol
-    );
-
-    return (
-        <aside className="w-[220px] shrink-0 bg-bg border-r border-hairline flex flex-col p-4">
-            <div className="flex items-center gap-2 px-1 mb-8">
-                <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center text-white">
-                    <Plus size={18} />
-                </div>
-                <div>
-                    <p className="font-display text-lg leading-none">anisa</p>
-                    <p className="text-[10px] tracking-widest text-ink-soft">CLÍNICA</p>
-                </div>
-            </div>
-
-            <p className="text-[11px] font-semibold tracking-widest text-ink-soft/70 px-3 mb-2">GESTIÓN</p>
-            <nav className="flex flex-col gap-1 mb-6">
-                {enlacesGestion.map((item) => (
-                    <ItemNav key={item.a} {...item} />
-                ))}
-            </nav>
-
-            <p className="text-[11px] font-semibold tracking-widest text-ink-soft/70 px-3 mb-2">ADMINISTRACIÓN</p>
-            <nav className="flex flex-col gap-1">
-                {enlacesVisibles.map((item) => (
-                    <ItemNav key={item.a} {...item} />
-                ))}
-            </nav>
-
-            <div className="min-w-0 mt-auto pt-6">
-                <p className="text-sm font-medium truncate">{usuario?.nombre || "..."}</p>
-                <p className="text-xs text-ink-soft capitalize truncate">{usuario?.rol}</p>
-            </div>
-        </aside>   
-    );
+function useVisibleLinks() {
+  const user = useUsuario();
+  return adminLinks.filter((link) => !link.role || link.role === user?.rol);
 }
 
-export default Sidebar; 
+export function MobileNavigation() {
+  const { t } = useLocale();
+  const visibleLinks = useVisibleLinks();
+  const location = useLocation();
+  const menu = useRef(null);
 
+  useEffect(() => {
+    menu.current.open = false;
+  }, [location.pathname]);
+
+  function closeMenu() {
+    menu.current.open = false;
+    menu.current.querySelector("summary").focus();
+  }
+
+  return (
+    <details ref={menu} className="mobile-navigation" onKeyDown={(e) => {
+      if (e.key === "Escape") closeMenu();
+    }}>
+      <summary aria-label={t("openMenu")}><Menu size={20} aria-hidden="true" /><span>anisa</span></summary>
+      <nav aria-label={t("navigation")} className="mobile-menu">
+        <NavigationLinks links={[...managementLinks, ...visibleLinks]} onNavigate={closeMenu} />
+      </nav>
+    </details>
+  );
+}
+
+export default function Sidebar() {
+  const user = useUsuario();
+  const { t } = useLocale();
+  const visibleLinks = useVisibleLinks();
+  return (
+    <aside className="sidebar">
+      <Brand />
+      <p className="nav-group">{t("management")}</p>
+      <nav aria-label={t("management")}><NavigationLinks links={managementLinks} /></nav>
+      <p className="nav-group">{t("administration")}</p>
+      <nav aria-label={t("administration")}><NavigationLinks links={visibleLinks} /></nav>
+      <div className="sidebar-account">
+        <p className="text-sm font-semibold break-words">{user?.nombre ?? "…"}</p>
+        <p className="meta">{user?.rol && t(user.rol)}</p>
+      </div>
+    </aside>
+  );
+}

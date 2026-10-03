@@ -1,47 +1,20 @@
-import { useState, useEffect } from "react";
-import { apiFetch, logout } from "./apiClient";
+import { logout } from "./apiClient";
+import { useLocale } from "./localeContext";
+import { useUsuario } from "./usuarioContext";
+import LanguageSelector from "./LanguageSelector";
+import { PageHeading } from "./Ui";
 
-function Ajustes() {
-  const [usuario, setUsuario] = useState(null);
-
-  useEffect(() => {
-    apiFetch("/auth/me").then(setUsuario);
-  }, []);
-
-  function cerrarSesion() {
-    logout();
-    window.location.reload();
-  }
-
+export default function Ajustes() {
+  const user = useUsuario();
+  const { t } = useLocale();
+  function signOut() { logout(); window.location.reload(); }
   return (
-    <div className="space-y-6 max-w-lg">
-      <h1 className="font-display text-2xl">Ajustes</h1>
-
-      <div className="bg-surface border border-hairline rounded-2xl p-4 space-y-3">
-        <h2 className="font-medium">Tu cuenta</h2>
-        {usuario && (
-          <div className="text-sm space-y-1">
-            <p>
-              <span className="text-ink-soft">Nombre:</span> {usuario.nombre}
-            </p>
-            <p>
-              <span className="text-ink-soft">Email:</span> {usuario.email}
-            </p>
-            <p>
-              <span className="text-ink-soft">Rol:</span> {usuario.rol}
-            </p>
-          </div>
-        )}
-        <button onClick={cerrarSesion} className="text-sm font-medium text-red-ink hover:underline">
-          Cerrar sesión
-        </button>
-      </div>
-
-      <div className="bg-surface border border-hairline rounded-2xl p-4 text-sm text-ink-soft">
-        Más ajustes (roles de equipo, notificaciones, idioma de la interfaz) — próximamente.
-      </div>
+    <div className="max-w-2xl">
+      <PageHeading title={t("settings")} />
+      <section className="panel mb-6"><div className="panel-heading"><h2>{t("account")}</h2></div><dl className="patient-details">
+        <div><dt>{t("name")}</dt><dd>{user?.nombre ?? "—"}</dd></div><div><dt>{t("email")}</dt><dd dir="ltr">{user?.email ?? "—"}</dd></div><div><dt>{t("role")}</dt><dd>{user?.rol ? t(user.rol) : "—"}</dd></div>
+      </dl><div className="panel-body"><button className="button button-danger" onClick={signOut}>{t("signOut")}</button></div></section>
+      <section className="panel"><div className="panel-heading"><div><h2>{t("interfaceLanguage")}</h2><p className="meta mt-1">{t("languageHelp")}</p></div><LanguageSelector /></div></section>
     </div>
   );
 }
-
-export default Ajustes;

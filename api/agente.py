@@ -136,7 +136,7 @@ DEFINICIONES_HERRAMIENTAS = [
 SYSTEM_PROMPT = """Eres Anisa, la asistente del equipo de Atención al Paciente Internacional.
 Tienes herramientas para buscar pacientes, consultar citas y pagos pendientes,
 enviar mensajes, y consultar documentación de referencia sobre aseguradoras. Usa las
-herramientas cuando las necesites. Responde siempre en español, de forma breve y clara.
+herramientas cuando las necesites. Responde de forma breve y clara en {idioma_respuesta}.
 Si envías un mensaje, redáctalo en el idioma del paciente. Si usas consultar_documentacion,
 cita siempre el documento y la sección de donde sale la información (p. ej. "según Bupa
 Global, sección Documentación requerida..."); si no encuentra nada relevante, dilo
@@ -145,21 +145,45 @@ claramente en vez de inventar una respuesta."""
 MAX_PASOS = 8  # evita bucles infinitos si el modelo no deja de pedir herramientas
 
 
-def preguntar(pregunta, db):
+IDIOMAS_RESPUESTA = {"es": "español", "en": "inglés", "ar": "árabe", "fr": "francés"}
+ERRORES_PROVEEDOR = {
+    "es": "No se ha podido obtener una respuesta del asistente. Revisa el estado de las citas y los mensajes antes de repetir la petición.",
+    "en": "The assistant could not return a response. Check appointments and messages before repeating the request.",
+    "ar": "تعذر على المساعد تقديم رد. تحقق من المواعيد والرسائل قبل تكرار الطلب.",
+    "fr": "L’assistant n’a pas pu fournir de réponse. Vérifiez les rendez-vous et les messages avant de répéter la demande.",
+}
+ERRORES_LIMITE = {
+    "es": "No he podido completar la petición tras varios pasos. Prueba a dividirla en una tarea más pequeña.",
+    "en": "I could not complete the request after several steps. Try splitting it into a smaller task.",
+    "ar": "تعذر إكمال الطلب بعد عدة خطوات. حاول تقسيمه إلى مهمة أصغر.",
+    "fr": "Je n’ai pas pu terminer la demande après plusieurs étapes. Essayez de la diviser en une tâche plus simple.",
+}
+
+
+class ErrorAgente(RuntimeError):
+    def __init__(self, mensaje, pasos):
+        super().__init__(mensaje)
+        self.pasos = pasos
+
+
+def preguntar(pregunta, db, idioma="es"):
     """Devuelve una tupla: (respuesta_final_en_texto, lista_de_pasos_dados)."""
     herramientas_disponibles = construir_herramientas(db)
     mensajes = [
-        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "system", "content": SYSTEM_PROMPT.format(idioma_respuesta=IDIOMAS_RESPUESTA[idioma])},
         {"role": "user", "content": pregunta},
     ]
     pasos = []
 
     for _ in range(MAX_PASOS):
-        respuesta = cliente.chat.completions.create(
-            model=MODELO,
-            messages=mensajes,
-            tools=DEFINICIONES_HERRAMIENTAS,
-        )
+        try:
+            respuesta = cliente.chat.completions.create(
+                model=MODELO,
+                messages=mensajes,
+                tools=DEFINICIONES_HERRAMIENTAS,
+            )
+        except Exception as excepcion:
+            raise ErrorAgente(ERRORES_PROVEEDOR.get(idioma, ERRORES_PROVEEDOR["es"]), pasos) from excepcion
         mensaje = respuesta.choices[0].message
 
         if not mensaje.tool_calls:
@@ -215,8 +239,4 @@ def preguntar(pregunta, db):
                 }
             )
 
-    return (
-        "No he podido llegar a una respuesta final tras varios pasos. "
-        "Prueba a reformular la pregunta o a dividirla en partes más pequeñas.",
-        pasos,
-    )
+    raise ErrorAgente(ERRORES_LIMITE.get(idioma, ERRORES_LIMITE["es"]), pasos)
