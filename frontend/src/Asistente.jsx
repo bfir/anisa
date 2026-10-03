@@ -29,6 +29,7 @@ export default function Asistente() {
   const [deciding, setDeciding] = useState(null);
   const [actionError, setActionError] = useState(null);
   const pending = useResource(["/agente/acciones"]);
+  const canAsk = !pending.loading && pending.error?.status !== 403;
   const proposals = [...new Map([...(pending.data?.[0] ?? []), ...actions].map((action) => [action.id, action])).values()];
   const prompts = ["questionPayments", "questionAppointments", "questionDocs"];
 
@@ -69,7 +70,7 @@ export default function Asistente() {
   async function send(event, suggestion) {
     event?.preventDefault();
     const nextQuestion = (suggestion ?? question).trim();
-    if (!nextQuestion || loading) return;
+    if (!nextQuestion || loading || !canAsk) return;
     setHistory((items) => [...items, { role: "user", text: nextQuestion }]); setQuestion(""); setLoading(true);
     try {
       const response = await apiFetch("/agente", {
@@ -81,8 +82,8 @@ export default function Asistente() {
         role: "assistant", text: response.respuesta, steps: response.pasos,
         error: response.error || response.pasos?.some((step) => step.error),
       }]);
-    } catch {
-      setHistory((items) => [...items, { role: "assistant", text: t("assistantError"), error: true }]);
+    } catch (error) {
+      setHistory((items) => [...items, { role: "assistant", text: t(error.status === 403 ? "accessDenied" : "assistantError"), error: true }]);
     } finally { setLoading(false); }
   }
 
@@ -136,7 +137,7 @@ export default function Asistente() {
         {history.length === 0 && (
           <section className="assistant-welcome">
             <Brand /><h2>{t("assistantTitle")}</h2><p>{t("assistantSummary")}</p>
-            <div className="prompt-list">{prompts.map((key) => <button className="prompt-choice" key={key} onClick={() => send(null, t(key))}><span>{t(key)}</span><ArrowRight className="direction-arrow shrink-0" size={16} aria-hidden="true" /></button>)}</div>
+            <div className="prompt-list">{prompts.map((key) => <button className="prompt-choice" key={key} disabled={loading || !canAsk} onClick={() => send(null, t(key))}><span>{t(key)}</span><ArrowRight className="direction-arrow shrink-0" size={16} aria-hidden="true" /></button>)}</div>
           </section>
         )}
         {history.map((turn, index) => (
@@ -148,7 +149,7 @@ export default function Asistente() {
         {loading && <p role="status" className="muted text-sm">{t("thinking")}</p>}
       </div>
       <form onSubmit={send} className="composer">
-        <div className="composer-row"><label className="flex-1"><span className="sr-only">{t("askLabel")}</span><textarea rows={1} className="field" value={question} onChange={(e) => setQuestion(e.target.value)} placeholder={t("askPlaceholder")} dir="auto" /></label><button className="button button-primary" aria-label={t("sendQuestion")} disabled={loading || !question.trim()}><Send size={17} aria-hidden="true" /><span>{t("sendQuestion")}</span></button></div>
+        <div className="composer-row"><label className="flex-1"><span className="sr-only">{t("askLabel")}</span><textarea rows={1} className="field" value={question} onChange={(e) => setQuestion(e.target.value)} placeholder={t("askPlaceholder")} dir="auto" disabled={!canAsk} /></label><button className="button button-primary" aria-label={t("sendQuestion")} disabled={loading || !canAsk || !question.trim()}><Send size={17} aria-hidden="true" /><span>{t("sendQuestion")}</span></button></div>
         <p className="meta">{t("assistantNote")}</p>
       </form>
     </div>
