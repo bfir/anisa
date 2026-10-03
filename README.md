@@ -269,9 +269,25 @@ Este es un proyecto de portfolio en construcción activa. Con honestidad sobre l
 - [x] RAG sobre documentación de aseguradoras (Cohere + pgvector), con evaluación cuantitativa
 - [x] Servidor MCP de solo lectura (documentación + auditoría)
 - [x] Tests automatizados (pytest)
-- [ ] Aprobación humana ("Aprobar / Descartar") antes de que el asistente ejecute una acción
+- [x] Aprobación humana ("Aprobar / Descartar") antes de que el asistente ejecute una acción
 - [ ] Integración continua (CI)
 - [ ] Métricas reales de pacientes activos e ingresos
+
+## Aprobación de acciones del asistente
+
+El asistente prepara propuestas para enviar mensajes o modificar citas. No ejecuta estas
+acciones durante una pregunta: el operador revisa el paciente, texto o cita y pulsa
+«Aprobar y ejecutar» o «Descartar». Las propuestas se conservan en auditoría, pertenecen
+al usuario que las solicita y caducan a los 15 minutos.
+
+La aprobación reserva la propuesta antes de ejecutar para impedir reenvíos por doble clic
+o repetición de la petición. Una propuesta en curso cuyo resultado no se haya confirmado
+debe revisarse antes de solicitar otra. Los cambios de cita comprueban que la cita sigue
+igual que cuando se propuso. El correo mantiene el destino de pruebas de la demo.
+
+API: `GET /agente/acciones`, `GET /agente/acciones/{id}` y
+`POST /agente/acciones/{id}` con `{"decision": "aprobar"}` o
+`{"decision": "rechazar"}`. Todas requieren un operador autenticado.
 
 ## Aviso
 

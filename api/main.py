@@ -6,10 +6,12 @@ from sqlalchemy.orm import Session
 
 from api import db as db_module
 from api import agente
+from api import aprobaciones
 from api.database import get_db
 from api.modelos import (
     Paciente, Cita, Pago, MensajeNuevo, Mensaje,
     PreguntaAgente, RespuestaAgente, CitaActualizar, RegistroAuditoria,
+    AccionPropuesta, DecisionAccion,
 )
 
 from fastapi.security import OAuth2PasswordRequestForm
@@ -76,9 +78,48 @@ def mensajes_de_paciente(paciente_id: int, db: Session = Depends(get_db), usuari
 
 @app.post("/agente", response_model=RespuestaAgente)
 def preguntar_al_agente(cuerpo: PreguntaAgente, db: Session = Depends(get_db), usuario: Usuario = Depends(puede_actuar)):
-    respuesta, pasos = agente.preguntar(cuerpo.pregunta, db)
-    db_module.registrar_auditoria(db, usuario.id, cuerpo.pregunta, respuesta, pasos)
-    return {"respuesta": respuesta, "pasos": pasos}
+    error = False
+    try:
+        respuesta, pasos = agente.preguntar(
+            cuerpo.pregunta, db, idioma=cuerpo.idioma, usuario_id=usuario.id,
+        )
+    except agente.ErrorAgente as excepcion:
+        respuesta = str(excepcion)
+        pasos = excepcion.pasos
+        error = True
+
+    if any(paso["error"] for paso in pasos):
+        error = True
+
+    try:
+        db_module.registrar_auditoria(db, usuario.id, cuerpo.pregunta, respuesta, pasos)
+    except Exception:
+        db.rollback()
+        error = True
+
+    acciones = [
+        paso["resultado"] for paso in pasos
+        if paso["herramienta"] in aprobaciones.HERRAMIENTAS_ACCION and paso["error"] is None
+    ]
+    return {"respuesta": respuesta, "pasos": pasos, "error": error, "acciones": acciones}
+
+
+@app.get("/agente/acciones", response_model=list[AccionPropuesta])
+def acciones_pendientes(db: Session = Depends(get_db), usuario: Usuario = Depends(puede_actuar)):
+    return aprobaciones.listar(db, usuario.id)
+
+
+@app.get("/agente/acciones/{accion_id}", response_model=AccionPropuesta)
+def estado_accion(accion_id: int, db: Session = Depends(get_db), usuario: Usuario = Depends(puede_actuar)):
+    return aprobaciones.obtener(db, usuario.id, accion_id)
+
+
+@app.post("/agente/acciones/{accion_id}", response_model=AccionPropuesta)
+def decidir_accion(
+    accion_id: int, cuerpo: DecisionAccion,
+    db: Session = Depends(get_db), usuario: Usuario = Depends(puede_actuar),
+):
+    return aprobaciones.decidir(db, usuario.id, accion_id, cuerpo.decision)
 
 
 @app.get("/auditoria", response_model=list[RegistroAuditoria])

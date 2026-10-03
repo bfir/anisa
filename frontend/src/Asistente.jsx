@@ -1,97 +1,157 @@
 import { useState } from "react";
-import { Send } from "lucide-react";
+import { ArrowRight, Send } from "lucide-react";
 import { apiFetch } from "./apiClient";
+import { useLocale } from "./localeContext";
+import { useResource } from "./useResource";
+import { Brand, Notice, ResourceState } from "./Ui";
+import { patientLanguages } from "./translations";
 
-function Asistente() {
-  const [historial, setHistorial] = useState([]);
-  const [pregunta, setPregunta] = useState("");
-  const [cargando, setCargando] = useState(false);
+const messageTypeKeys = { recordatorio_cita: "appointmentReminder", pago_pendiente: "paymentReminder", informativo: "informational" };
 
-  async function enviar(evento) {
-    evento.preventDefault();
-    if (!pregunta.trim() || cargando) return;
+function inlineMarkdown(text) {
+  return text.split(/(\*\*[^*\n]+\*\*|\*[^*\s][^*\n]*?\*|_[^_\s][^_\n]*?_)/g).map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) return <strong key={index}>{part.slice(2, -2)}</strong>;
+    if ((part.startsWith("*") && part.endsWith("*")) || (part.startsWith("_") && part.endsWith("_"))) return <em key={index}>{part.slice(1, -1)}</em>;
+    return part;
+  });
+}
 
-    const miPregunta = pregunta;
-    setHistorial((h) => [...h, { rol: "usuario", texto: miPregunta }]);
-    setPregunta("");
-    setCargando(true);
+function AssistantText({ text }) {
+  return text.split("\n").map((line, index) => <span className="block min-h-[1lh]" dir="auto" key={index}>{inlineMarkdown(line)}</span>);
+}
 
+export default function Asistente() {
+  const { t, language, formatDate } = useLocale();
+  const [history, setHistory] = useState([]);
+  const [question, setQuestion] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [actions, setActions] = useState([]);
+  const [deciding, setDeciding] = useState(null);
+  const [actionError, setActionError] = useState(null);
+  const pending = useResource(["/agente/acciones"]);
+  const canAsk = !pending.loading && !pending.error;
+  const proposals = [...new Map([...(pending.data?.[0] ?? []), ...actions].map((action) => [action.id, action])).values()];
+  const prompts = ["questionPayments", "questionAppointments", "questionDocs"];
+
+  function remember(action) {
+    setActions((items) => [...items.filter((item) => item.id !== action.id), action]);
+  }
+
+  async function decide(action, decision) {
+    if (deciding !== null) return;
+    setDeciding(action.id); setActionError(null);
     try {
-      const respuesta = await apiFetch("/agente", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pregunta: miPregunta }),
+      const result = await apiFetch(`/agente/acciones/${action.id}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ decision }),
       });
-      setHistorial((h) => [
-        ...h,
-        { rol: "asistente", texto: respuesta.respuesta, pasos: respuesta.pasos },
-      ]);
-    } catch (error) {
-      setHistorial((h) => [
-        ...h,
-        { rol: "asistente", texto: "No he podido procesar la pregunta. Inténtalo de nuevo." },
-      ]);
+      remember(result);
+    } catch {
+      setActionError(t("actionError"));
+      try {
+        remember(await apiFetch(`/agente/acciones/${action.id}`));
+      } catch {
+        remember({ ...action, estado: "en_curso" });
+      }
     } finally {
-      setCargando(false);
+      setDeciding(null);
     }
   }
 
+  async function refresh(action) {
+    setDeciding(action.id); setActionError(null);
+    try {
+      remember(await apiFetch(`/agente/acciones/${action.id}`));
+    } catch {
+      setActionError(t("actionError"));
+    } finally { setDeciding(null); }
+  }
+
+  async function send(event, suggestion) {
+    event?.preventDefault();
+    const nextQuestion = (suggestion ?? question).trim();
+    if (!nextQuestion || loading || !canAsk) return;
+    setHistory((items) => [...items, { role: "user", text: nextQuestion }]); setQuestion(""); setLoading(true);
+    try {
+      const response = await apiFetch("/agente", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pregunta: nextQuestion, idioma: language }),
+      });
+      for (const action of response.acciones ?? []) remember(action);
+      setHistory((items) => [...items, {
+        role: "assistant", text: response.respuesta, steps: response.pasos,
+        error: response.error || response.pasos?.some((step) => step.error),
+      }]);
+    } catch (error) {
+      setHistory((items) => [...items, { role: "assistant", text: t(error.status === 403 ? "accessDenied" : "assistantError"), error: true }]);
+    } finally { setLoading(false); }
+  }
+
   return (
-    <div className="max-w-2xl mx-auto flex flex-col h-[calc(100vh-4rem)]">
-      <h1 className="font-display text-2xl mb-4">Asistente Anisa</h1>
-
-      <div className="flex-1 overflow-auto space-y-4 pr-1">
-        {historial.length === 0 && (
-          <p className="text-ink-soft text-sm">
-            Pregúntale algo, por ejemplo: "¿qué pagos están pendientes?"
-          </p>
-        )}
-        {historial.map((turno, i) => (
-          <div key={i} className={turno.rol === "usuario" ? "text-right" : ""}>
-            <div
-              className={`inline-block rounded-2xl px-4 py-2 max-w-[85%] text-sm text-left ${
-                turno.rol === "usuario"
-                  ? "bg-accent text-white"
-                  : "bg-surface border border-hairline"
-              }`}
-            >
-              {turno.texto}
+    <div className="assistant-page">
+      <div className="conversation" aria-live="polite">
+        <ResourceState resource={pending} />
+        {actionError && <Notice tone="error">{actionError}</Notice>}
+        {proposals.length > 0 && (
+          <section className="panel" aria-label={t("reviewActions")}>
+            <div className="panel-heading"><h2>{t("reviewActions")}</h2></div>
+            <div className="panel-body">
+              <p className="muted text-sm mb-4">{t("approvalIntro")}</p>
+              {proposals.map((action) => {
+                const isMessage = action.herramienta === "enviar_mensaje";
+                const expired = new Date(`${action.expira_en}Z`) <= new Date();
+                const state = action.estado === "pendiente" && expired ? "caducada" : action.estado;
+                return (
+                  <article key={action.id} className="approval-entry">
+                    <h3>{isMessage ? t("sendMessage") : t(action.argumentos.accion === "cancelar" ? "cancelAppointment" : "reschedule")}</h3>
+                    <p dir="auto">{action.paciente.nombre} <span className="meta">· ID <bdi>{action.paciente.id}</bdi></span></p>
+                    {isMessage ? (
+                      <>
+                        <p className="meta">{t("email")}: <bdi dir="ltr">{action.paciente.email}</bdi> · {patientLanguages[action.argumentos.idioma]}</p>
+                        <p className="meta">{t("messageType")}: {t(messageTypeKeys[action.argumentos.tipo])}</p>
+                        <p className="meta">{t("demoEmail")}</p>
+                        <p className="message-text" dir={action.argumentos.idioma === "ar" ? "rtl" : "auto"} lang={action.argumentos.idioma}>{action.argumentos.texto}</p>
+                      </>
+                    ) : (
+                      <>
+                        <p>{action.cita.especialidad} · {action.cita.medico}</p>
+                        <p className="meta">{t("currentAppointment")}: {formatDate(action.cita.fecha)} · ID <bdi>{action.argumentos.cita_id}</bdi></p>
+                        {action.argumentos.nueva_fecha && <p>{t("newDate")}: {formatDate(action.argumentos.nueva_fecha)}</p>}
+                      </>
+                    )}
+                    <p role="status" className="meta mt-3">{t(`approval_${state}`)}</p>
+                    {state === "pendiente" && (
+                      <div className="approval-buttons">
+                        <button className="button button-primary" disabled={deciding !== null} onClick={() => decide(action, "aprobar")}>{deciding === action.id ? t("saving") : t("approveAction")}</button>
+                        <button className="button button-secondary" disabled={deciding !== null} onClick={() => decide(action, "rechazar")}>{t("discardAction")}</button>
+                      </div>
+                    )}
+                    {state === "en_curso" && <button className="button button-secondary mt-3" disabled={deciding !== null} onClick={() => refresh(action)}>{t("refreshAction")}</button>}
+                    {state === "fallida" && <Notice tone="error">{action.resultado?.estado_envio === "fallido" ? t("savedEmailFailed") : t("actionError")}</Notice>}
+                  </article>
+                );
+              })}
             </div>
-            {turno.pasos && turno.pasos.length > 0 && (
-              <details className="text-xs text-ink-soft mt-1 text-left">
-                <summary className="cursor-pointer">Ver {turno.pasos.length} paso(s)</summary>
-                <ul className="mt-1 space-y-1">
-                  {turno.pasos.map((paso, j) => (
-                    <li key={j}>
-                      🔧 <strong>{paso.herramienta}</strong>({JSON.stringify(paso.argumentos)})
-                      {paso.error && <span className="text-red-ink"> · falló: {paso.error}</span>}
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            )}
-          </div>
+          </section>
+        )}
+        {history.length === 0 && (
+          <section className="assistant-welcome">
+            <Brand /><h2>{t("assistantTitle")}</h2><p>{t("assistantSummary")}</p>
+            <div className="prompt-list">{prompts.map((key) => <button className="prompt-choice" key={key} disabled={loading || !canAsk} onClick={() => send(null, t(key))}><span>{t(key)}</span><ArrowRight className="direction-arrow shrink-0" size={16} aria-hidden="true" /></button>)}</div>
+          </section>
+        )}
+        {history.map((turn, index) => (
+          <article key={index} className={`chat-turn chat-${turn.role}${turn.error ? " error" : ""}`}>
+            <div className="chat-text" lang={turn.role === "assistant" ? language : undefined}><AssistantText text={turn.text} /></div>
+            {turn.steps?.length > 0 && <details className="tool-details"><summary>{t("toolSteps", { count: turn.steps.length })}</summary><ul>{turn.steps.map((step, stepIndex) => <li key={stepIndex}><strong>{step.herramienta}</strong>{step.error && <span className="text-red-ink"> · {t("toolError")}</span>}</li>)}</ul></details>}
+          </article>
         ))}
-        {cargando && <p className="text-ink-soft text-sm">Anisa está pensando...</p>}
+        {loading && <p role="status" className="muted text-sm">{t("thinking")}</p>}
       </div>
-
-      <form onSubmit={enviar} className="flex gap-2 pt-4 border-t border-hairline mt-4">
-        <input
-          type="text"
-          value={pregunta}
-          onChange={(e) => setPregunta(e.target.value)}
-          placeholder="Pregunta al asistente..."
-          className="flex-1 border border-hairline rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent"
-        />
-        <button
-          type="submit"
-          className="bg-accent text-white px-4 py-2 rounded-lg hover:opacity-90 transition"
-        >
-          <Send size={16} />
-        </button>
+      <form onSubmit={send} className="composer">
+        <div className="composer-row"><label className="flex-1"><span className="sr-only">{t("askLabel")}</span><textarea rows={1} className="field" value={question} onChange={(e) => setQuestion(e.target.value)} placeholder={t("askPlaceholder")} dir="auto" disabled={!canAsk} /></label><button className="button button-primary" aria-label={t("sendQuestion")} disabled={loading || !canAsk || !question.trim()}><Send size={17} aria-hidden="true" /><span>{t("sendQuestion")}</span></button></div>
+        <p className="meta">{t("assistantNote")}</p>
       </form>
     </div>
   );
 }
-
-export default Asistente;

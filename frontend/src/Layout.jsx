@@ -1,17 +1,29 @@
-import Sidebar from "./Sidebar";
+import Sidebar, { MobileNavigation } from "./Sidebar";
 import { UsuarioProvider } from "./UsuarioProvider";
+import { useLocale } from "./localeContext";
+import LanguageSelector from "./LanguageSelector";
 
 function Layout({ children }) {
-    return (
-        <UsuarioProvider>
-            <div className="flex min-h-screen bg-bg">
-                <Sidebar />
-                <div className="flex-1 flex flex-col min-w-0">
-                    <main className="flex-1 p-8 overflow-auto">{children}</main>
-                </div>
+  const { t } = useLocale();
+  return (
+    <UsuarioProvider>
+      <a href="#main-content" className="skip-link">{t("skipContent")}</a>
+      <div className="app-shell">
+        <Sidebar />
+        <div className="workspace">
+          <header className="topbar">
+            <MobileNavigation />
+            <div className="topbar-title">{t("workspace")}</div>
+            <div className="flex items-center gap-4 flex-wrap">
+              <span className="demo-label">{t("demo")}</span>
+              <LanguageSelector />
             </div>
-        </UsuarioProvider>
-    );
+          </header>
+          <main id="main-content" tabIndex={-1} className="main-content">{children}</main>
+        </div>
+      </div>
+    </UsuarioProvider>
+  );
 }
 
 export default Layout;

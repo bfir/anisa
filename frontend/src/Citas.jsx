@@ -1,104 +1,77 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { apiFetch } from "./apiClient";
+import { useLocale } from "./localeContext";
+import { useResource } from "./useResource";
+import { AppointmentStatus, EmptyState, Notice, PageHeading, ResourceState } from "./Ui";
 
-const textoEstado = { programada: "Confirmada", completada: "Completada", cancelada: "Cancelada" };
-const colorEstado = {
-  programada: "bg-success-bg text-success-ink",
-  completada: "bg-hairline text-ink-soft",
-  cancelada: "bg-red-bg text-red-ink",
-};
+export default function Citas() {
+  const { t, formatDate } = useLocale();
+  const [days, setDays] = useState(7);
+  const [action, setAction] = useState(null);
+  const [notice, setNotice] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const resource = useResource([`/citas/proximas?dias=${days}`]);
 
-function Citas() {
-  const [citas, setCitas] = useState([]);
-  const [dias, setDias] = useState(7);
-  const [aviso, setAviso] = useState(null);
-
-  useEffect(() => {
-    cargar();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dias]);
-
-  function cargar() {
-    apiFetch(`/citas/proximas?dias=${dias}`).then(setCitas);
+  async function update(appointment, type, value) {
+    setSaving(true); setNotice(null);
+    try {
+      await apiFetch(`/citas/${appointment.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accion: type, nueva_fecha: type === "reprogramar" ? value.replace("T", " ") : null,
+        }),
+      });
+      setNotice({ tone: "success", key: type === "cancelar" ? "appointmentCancelled" : "appointmentRescheduled" });
+      setAction(null); resource.reload();
+    } catch {
+      setNotice({ tone: "error", key: "actionError" });
+      resource.reload();
+    } finally {
+      setSaving(false);
+    }
   }
 
-  async function cancelar(citaId) {
-    await apiFetch(`/citas/${citaId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ accion: "cancelar" }),
-    });
-    setAviso("Cita cancelada.");
-    cargar();
-  }
-
-  async function reprogramar(citaId) {
-    const nuevaFecha = window.prompt("Nueva fecha y hora (formato: 2026-10-05 10:30):");
-    if (!nuevaFecha) return;
-    await apiFetch(`/citas/${citaId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ accion: "reprogramar", nueva_fecha: nuevaFecha }),
-    });
-    setAviso("Cita reprogramada.");
-    cargar();
-  }
-
+  const appointments = resource.data?.[0] ?? [];
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center flex-wrap gap-4">
-        <h1 className="font-display text-2xl">Citas</h1>
-        <select
-          value={dias}
-          onChange={(e) => setDias(Number(e.target.value))}
-          className="border border-hairline rounded-lg px-3 py-2 text-sm"
-        >
-          <option value={1}>Hoy</option>
-          <option value={7}>Próximos 7 días</option>
-          <option value={30}>Próximos 30 días</option>
-        </select>
-      </div>
-
-      {aviso && <p className="text-sm text-success-ink">{aviso}</p>}
-
-      <div className="bg-surface border border-hairline rounded-2xl divide-y divide-hairline">
-        {citas.length === 0 && (
-          <p className="text-ink-soft text-sm p-4">No hay citas en este rango.</p>
-        )}
-        {citas.map((c) => (
-          <div key={c.id} className="flex items-center gap-4 p-4 flex-wrap">
-            <div className="w-36 text-sm text-ink-soft shrink-0">{c.fecha}</div>
-            <div className="flex-1 min-w-[160px]">
-              <p className="font-medium">{c.paciente_nombre}</p>
-              <p className="text-xs text-ink-soft">
-                {c.especialidad} · {c.medico}
-              </p>
-            </div>
-            <span
-              className={`text-xs font-medium px-2 py-1 rounded-full ${
-                colorEstado[c.estado] || "bg-hairline text-ink-soft"
-              }`}
-            >
-              {textoEstado[c.estado] || c.estado}
-            </span>
-            {c.estado === "programada" && (
-              <div className="flex gap-3">
-                <button onClick={() => reprogramar(c.id)} className="text-xs font-medium hover:underline">
-                  Reprogramar
-                </button>
-                <button
-                  onClick={() => cancelar(c.id)}
-                  className="text-xs font-medium text-red-ink hover:underline"
-                >
-                  Cancelar
-                </button>
+    <>
+      <PageHeading title={t("appointments")}>
+        <label><span className="field-label">{t("appointmentRange")}</span>
+          <select className="field" value={days} onChange={(e) => { setDays(Number(e.target.value)); setAction(null); setNotice(null); }}>
+            <option value={1}>{t("today")}</option><option value={7}>{t("next7")}</option><option value={30}>{t("next30")}</option>
+          </select>
+        </label>
+      </PageHeading>
+      {notice && <div className="mb-5"><Notice tone={notice.tone}>{t(notice.key)}</Notice></div>}
+      {(resource.loading || resource.error) ? <ResourceState resource={resource} /> : (
+        <section className="panel">
+          {appointments.length === 0 ? <EmptyState>{t("noAppointments")}</EmptyState> : appointments.map((appointment) => (
+            <article key={appointment.id}>
+              <div className="appointment-row">
+                <time className="w-36 text-sm text-ink-soft shrink-0" dateTime={appointment.fecha}>{formatDate(appointment.fecha)}</time>
+                <div className="flex-1 min-w-[150px]"><p className="font-semibold">{appointment.paciente_nombre}</p><p className="meta">{appointment.especialidad} · {appointment.medico}</p></div>
+                <AppointmentStatus status={appointment.estado} />
+                {appointment.estado === "programada" && (
+                  <div className="flex gap-2 flex-wrap">
+                    <button className="button button-secondary" onClick={() => setAction({ id: appointment.id, type: "reprogramar", value: appointment.fecha.slice(0, 16).replace(" ", "T") })}>{t("reschedule")}</button>
+                    <button className="button button-danger" onClick={() => setAction({ id: appointment.id, type: "cancelar" })}>{t("cancelAppointment")}</button>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
+              {action?.id === appointment.id && (
+                <div className="action-editor">
+                  {action.type === "reprogramar" ? (
+                    <label><span className="field-label">{t("newDate")}</span><input className="field" type="datetime-local" value={action.value} onChange={(e) => setAction({ ...action, value: e.target.value })} /></label>
+                  ) : <p className="font-semibold flex-1">{t("cancelQuestion")}</p>}
+                  <button className={action.type === "cancelar" ? "button button-danger" : "button button-primary"} disabled={saving || !action.value && action.type === "reprogramar"} onClick={() => update(appointment, action.type, action.value)}>
+                    {t(saving ? "saving" : action.type === "cancelar" ? "confirmCancel" : "save")}
+                  </button>
+                  <button className="button button-secondary" disabled={saving} onClick={() => setAction(null)}>{t(action.type === "cancelar" ? "keepAppointment" : "back")}</button>
+                </div>
+              )}
+            </article>
+          ))}
+        </section>
+      )}
+    </>
   );
 }
-
-export default Citas;
