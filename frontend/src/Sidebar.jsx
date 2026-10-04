@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import { LayoutGrid, Users, Calendar, MessageSquare, CreditCard, BarChart3, Settings, Bot, ShieldCheck, Menu } from "lucide-react";
 import { useUsuario } from "./usuarioContext";
 import { useLocale } from "./localeContext";
-import { Brand } from "./Ui";
+import { Avatar, Brand } from "./Ui";
 
 const managementLinks = [
   { to: "/", key: "home", icon: LayoutGrid },
@@ -73,8 +73,11 @@ export default function Sidebar() {
       <p className="nav-group">{t("administration")}</p>
       <nav aria-label={t("administration")}><NavigationLinks links={visibleLinks} /></nav>
       <div className="sidebar-account">
-        <p className="text-sm font-semibold break-words">{user?.nombre ?? "…"}</p>
-        <p className="meta">{user?.rol && t(user.rol)}</p>
+        <Avatar name={user?.nombre} />
+        <div className="min-w-0">
+          <p className="text-sm font-semibold break-words">{user?.nombre ?? "…"}</p>
+          <p className="meta">{user?.rol && t(user.rol)}</p>
+        </div>
       </div>
     </aside>
   );

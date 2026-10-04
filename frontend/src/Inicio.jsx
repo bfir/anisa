@@ -1,11 +1,9 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Bot, CalendarDays, Search } from "lucide-react";
+import { ArrowRight, CalendarDays, Search } from "lucide-react";
 import { useUsuario } from "./usuarioContext";
 import { useLocale } from "./localeContext";
 import { useResource } from "./useResource";
-import { AppointmentStatus, Brand, EmptyState, PageHeading, ResourceState } from "./Ui";
-
-const initials = (name = "") => name.split(" ").slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+import { AppointmentStatus, Avatar, Brand, EmptyState, PageHeading, ResourceState } from "./Ui";
 
 export default function Inicio() {
   const user = useUsuario();
@@ -24,7 +22,7 @@ export default function Inicio() {
     value.setHours(0, 0, 0, 0);
     value.setDate(value.getDate() + index);
     const key = `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
-    return { value, count: week.filter((item) => item.fecha.startsWith(key)).length };
+    return { value, key, count: week.filter((item) => item.fecha.startsWith(key)).length };
   });
 
   return (
@@ -42,11 +40,11 @@ export default function Inicio() {
       </section>
       <div className="dashboard-grid">
         <section className="panel">
-          <div className="panel-heading"><h2>{t("nextAppointments")}</h2><Link to="/citas" className="text-link">{t("viewAppointments")}<ArrowRight className="direction-arrow" size={15} aria-hidden="true" /></Link></div>
+          <div className="panel-heading"><div className="section-title"><CalendarDays size={19} strokeWidth={1.8} aria-hidden="true" /><h2>{t("nextAppointments")}</h2></div><Link to="/citas" className="text-link">{t("viewAppointments")}<ArrowRight className="direction-arrow" size={15} aria-hidden="true" /></Link></div>
           {today.length === 0 ? <EmptyState>{t("noTodayAppointments")}</EmptyState> : today.map((appointment) => (
-            <article className="appointment-row" key={appointment.id}>
-              <time className="appointment-time" dateTime={appointment.fecha}>{formatDate(appointment.fecha, { hour: "2-digit", minute: "2-digit" })}</time>
-              <span className="avatar" aria-hidden="true">{initials(appointment.paciente_nombre)}</span>
+            <article className="appointment-row dashboard-appointment" key={appointment.id}>
+              <div className="appointment-slot"><time dateTime={appointment.fecha}>{formatDate(appointment.fecha, { hour: "2-digit", minute: "2-digit" })}</time><p className="meta">{formatDate(appointment.fecha, { day: "numeric", month: "short" })}</p></div>
+              <Avatar name={appointment.paciente_nombre} />
               <div className="min-w-0 flex-1"><p className="font-semibold truncate">{appointment.paciente_nombre}</p><p className="meta truncate">{appointment.especialidad} · {appointment.medico}</p></div>
               <AppointmentStatus status={appointment.estado} />
             </article>
@@ -54,10 +52,10 @@ export default function Inicio() {
           <div className="panel-body week-schedule">
             <div className="flex justify-between gap-4"><p className="text-sm font-semibold">{t("weekActivity")}</p><p className="meta">{t("appointmentCount", { count: number(week.length) })}</p></div>
             <div className="week-days">
-              {days.map(({ value, count }, index) => (
-                <div key={value.toISOString()} className={`week-day${index === 0 ? " today" : ""}`}>
+              {days.map(({ value, key, count }, index) => (
+                <div key={key} className={`week-day${index === 0 ? " today" : ""}`}>
                   <p className="meta">{new Intl.DateTimeFormat(locale, { weekday: "short" }).format(value)}</p>
-                  <p className="font-semibold">{number(value.getDate())}</p><p className="meta">{number(count)}</p>
+                  <time dateTime={key} aria-current={index === 0 ? "date" : undefined}>{number(value.getDate())}</time><p className="week-count" aria-label={t("appointmentCount", { count: number(count) })}>{number(count)}</p>
                 </div>
               ))}
             </div>
@@ -68,14 +66,14 @@ export default function Inicio() {
             <div className="panel-heading"><h2>{t("outstanding")}</h2><Link to="/pagos" className="text-link">{t("allPayments")}<ArrowRight className="direction-arrow" size={15} aria-hidden="true" /></Link></div>
             {payments.length === 0 ? <EmptyState>{t("noPayments")}</EmptyState> : payments.slice(0, 4).map((payment) => (
               <article className="appointment-row" key={payment.id}>
-                <span className="avatar" aria-hidden="true">{initials(payment.paciente_nombre)}</span>
+                <Avatar name={payment.paciente_nombre} />
                 <div className="min-w-0 flex-1"><p className="font-semibold truncate">{payment.paciente_nombre}</p><p className="meta truncate">{payment.concepto}</p></div>
                 <p className="font-semibold shrink-0">{currency(payment.importe)}</p>
               </article>
             ))}
           </section>
-          <section className="panel panel-body pt-6">
-            <div className="assistant-invitation"><Brand /><div><h2>{t("assistantIntro")}</h2><p className="muted text-sm mt-2">{t("assistantSummary")}</p><Link to="/asistente" className="button button-secondary mt-4"><Bot size={16} aria-hidden="true" />{t("askAssistant")}</Link></div></div>
+          <section className="assistant-invitation">
+            <Brand /><h2>{t("assistantIntro")}</h2><p>{t("assistantSummary")}</p><Link to="/asistente" className="button">{t("askAssistant")}<ArrowRight className="direction-arrow" size={16} aria-hidden="true" /></Link>
           </section>
         </div>
       </div>
