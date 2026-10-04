@@ -93,6 +93,7 @@ export default function Asistente() {
 
   return (
     <div className="assistant-page">
+      {history.length > 0 && <h1 className="sr-only">{t("assistantTitle")}</h1>}
       <div className="conversation" aria-live="polite">
         <ResourceState resource={pending} />
         {actionError && <Notice tone="error">{actionError}</Notice>}

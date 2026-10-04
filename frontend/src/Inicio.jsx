@@ -11,7 +11,7 @@ export default function Inicio() {
   const resource = useResource(["/citas/proximas?dias=1", "/citas/proximas?dias=7", "/pagos/pendientes"]);
   if (resource.loading || resource.error) return <ResourceState resource={resource} />;
 
-  const [today, week, payments] = resource.data;
+  const [next, week, payments] = resource.data;
   const total = payments.reduce((sum, payment) => sum + payment.importe, 0);
   const hour = new Date().getHours();
   const greeting = t(hour < 12 ? "morning" : hour < 20 ? "afternoon" : "evening");
@@ -34,14 +34,14 @@ export default function Inicio() {
         </div>
       </PageHeading>
       <section className="metric-strip" aria-label={t("daySummary")}>
-        <div className="metric"><p className="metric-label">{t("todayAppointments")}</p><p className="metric-value">{number(today.length)}</p></div>
+        <div className="metric"><p className="metric-label">{t("todayAppointments")}</p><p className="metric-value">{number(days[0].count)}</p></div>
         <div className="metric"><p className="metric-label">{t("weekAppointments")}</p><p className="metric-value">{number(week.length)}</p></div>
         <div className="metric"><p className="metric-label">{t("totalOutstanding")}</p><p className="metric-value">{currency(total)}</p><p className="meta">{t("paymentCount", { count: number(payments.length) })}</p></div>
       </section>
       <div className="dashboard-grid">
         <section className="panel">
           <div className="panel-heading"><div className="section-title"><CalendarDays size={19} strokeWidth={1.8} aria-hidden="true" /><h2>{t("nextAppointments")}</h2></div><Link to="/citas" className="text-link">{t("viewAppointments")}<ArrowRight className="direction-arrow" size={15} aria-hidden="true" /></Link></div>
-          {today.length === 0 ? <EmptyState>{t("noTodayAppointments")}</EmptyState> : today.map((appointment) => (
+          {next.length === 0 ? <EmptyState>{t("noTodayAppointments")}</EmptyState> : next.map((appointment) => (
             <article className="appointment-row dashboard-appointment" key={appointment.id}>
               <div className="appointment-slot"><time dateTime={appointment.fecha}>{formatDate(appointment.fecha, { hour: "2-digit", minute: "2-digit" })}</time><p className="meta">{formatDate(appointment.fecha, { day: "numeric", month: "short" })}</p></div>
               <Avatar name={appointment.paciente_nombre} />

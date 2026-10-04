@@ -173,10 +173,12 @@
 .chat-turn.error { background: var(--color-red-bg); color: var(--color-red-ink); }
 .chat-text { font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; text-align: start; }
 .tool-details { font-size: 12px; color: var(--color-ink-soft); margin-block-start: 12px; overflow-wrap: anywhere; }
+.tool-details summary { min-height: 44px; padding-block: 12px; }
 .tool-details li { margin-block-start: 8px; }
 .composer { position: sticky; bottom: 0; padding: 16px 0 max(12px, env(safe-area-inset-bottom)); background: var(--color-bg); border-block-start: 1px solid var(--color-hairline); }
 .composer-row { display: flex; align-items: flex-end; gap: 10px; }
 .composer textarea { resize: vertical; max-height: 160px; min-height: 48px; }
+.composer .button { min-width: 44px; flex-shrink: 0; }
 .composer .meta { margin-block-start: 10px; max-width: 75ch; }
 .data-table { overflow-x: auto; border-radius: var(--radius-panel); }
 .data-table table { width: 100%; font-size: 14px; }
