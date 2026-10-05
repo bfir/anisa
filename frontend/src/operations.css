@@ -124,6 +124,11 @@
   .followup-row { padding-inline: 16px; gap: 9px; flex-wrap: wrap; }
   .followup-row .avatar { width: 32px; height: 32px; }
   .followup-row .payment-amount { margin-inline-start: auto; }
+  .followup-payments .followup-row { display: grid; grid-template-columns: 32px minmax(0, 1fr) 15px; }
+  .followup-payments .avatar { grid-column: 1; grid-row: 1; }
+  .followup-payments .followup-person { grid-column: 2; grid-row: 1; }
+  .followup-payments .payment-amount { grid-column: 2; grid-row: 2; margin-inline-start: 0; justify-self: start; }
+  .followup-payments .followup-row > svg { grid-column: 3; grid-row: 1; }
 }
 @media (max-width: 480px) {
   .agenda-columns { display: none; }
