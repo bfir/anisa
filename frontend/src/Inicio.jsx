@@ -98,7 +98,7 @@ export default function Inicio() {
               <div className="agenda-filters">
                 <div className="schedule-range" role="group" aria-label={t("appointmentRange")}>
                   <button aria-pressed={selectedDay === days[0].key} aria-controls="agenda-rows" onClick={() => selectDay("today")}>{t("today")}</button>
-                  <button aria-pressed={day === null} aria-controls="agenda-rows" onClick={() => selectDay(null)}>{t("next7")}</button>
+                  <button aria-pressed={day === null} aria-controls="agenda-rows" onClick={() => selectDay(null)}>{t("sevenCalendarDays")}</button>
                 </div>
                 <label className="schedule-search">
                   <span className="sr-only">{t("searchScheduleLabel")}</span>
