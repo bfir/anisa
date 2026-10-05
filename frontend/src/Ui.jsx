@@ -4,16 +4,11 @@ import { patientLanguages } from "./translations";
 
 export function Brand() {
   return (
-    <div className="brand" aria-label="Anisa" translate="no">
+    <div className="brand" aria-label="Anisa">
       <span className="brand-mark"><Plus size={23} strokeWidth={2.5} aria-hidden="true" /></span>
       <span className="brand-name">anisa<span className="brand-dot">.</span></span>
     </div>
   );
-}
-
-export function Avatar({ name = "", className = "" }) {
-  const initials = name.trim().split(/\s+/).slice(0, 2).map((part) => part[0] ?? "").join("").toUpperCase();
-  return <span className={`avatar ${className}`} aria-hidden="true">{initials}</span>;
 }
 
 export function PageHeading({ title, description, children }) {

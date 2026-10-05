@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, BookOpen, CalendarDays, CreditCard, Send } from "lucide-react";
+import { ArrowRight, Send } from "lucide-react";
 import { apiFetch } from "./apiClient";
 import { useLocale } from "./localeContext";
 import { useResource } from "./useResource";
@@ -31,11 +31,7 @@ export default function Asistente() {
   const pending = useResource(["/agente/acciones"]);
   const canAsk = !pending.loading && !pending.error;
   const proposals = [...new Map([...(pending.data?.[0] ?? []), ...actions].map((action) => [action.id, action])).values()];
-  const prompts = [
-    { key: "questionPayments", icon: CreditCard },
-    { key: "questionAppointments", icon: CalendarDays },
-    { key: "questionDocs", icon: BookOpen },
-  ];
+  const prompts = ["questionPayments", "questionAppointments", "questionDocs"];
 
   function remember(action) {
     setActions((items) => [...items.filter((item) => item.id !== action.id), action]);
@@ -93,7 +89,6 @@ export default function Asistente() {
 
   return (
     <div className="assistant-page">
-      {history.length > 0 && <h1 className="sr-only">{t("assistantTitle")}</h1>}
       <div className="conversation" aria-live="polite">
         <ResourceState resource={pending} />
         {actionError && <Notice tone="error">{actionError}</Notice>}
@@ -141,8 +136,8 @@ export default function Asistente() {
         )}
         {history.length === 0 && (
           <section className="assistant-welcome">
-            <Brand /><h1>{t("assistantTitle")}</h1><p>{t("assistantSummary")}</p>
-            <div className="prompt-list">{prompts.map(({ key, icon: Icon }) => <button className="prompt-choice" key={key} disabled={loading || !canAsk} onClick={() => send(null, t(key))}><Icon size={19} strokeWidth={1.8} aria-hidden="true" /><span>{t(key)}</span><ArrowRight className="direction-arrow shrink-0" size={16} aria-hidden="true" /></button>)}</div>
+            <Brand /><h2>{t("assistantTitle")}</h2><p>{t("assistantSummary")}</p>
+            <div className="prompt-list">{prompts.map((key) => <button className="prompt-choice" key={key} disabled={loading || !canAsk} onClick={() => send(null, t(key))}><span>{t(key)}</span><ArrowRight className="direction-arrow shrink-0" size={16} aria-hidden="true" /></button>)}</div>
           </section>
         )}
         {history.map((turn, index) => (
@@ -154,7 +149,7 @@ export default function Asistente() {
         {loading && <p role="status" className="muted text-sm">{t("thinking")}</p>}
       </div>
       <form onSubmit={send} className="composer">
-        <div className="composer-row"><label className="flex-1 min-w-0"><span className="sr-only">{t("askLabel")}</span><textarea rows={1} className="field" name="question" autoComplete="off" value={question} onChange={(e) => setQuestion(e.target.value)} placeholder={t("askPlaceholder")} dir="auto" disabled={!canAsk} /></label><button className="button button-primary" aria-label={t("sendQuestion")} disabled={loading || !canAsk || !question.trim()}><Send size={17} aria-hidden="true" /><span>{t("sendQuestion")}</span></button></div>
+        <div className="composer-row"><label className="flex-1"><span className="sr-only">{t("askLabel")}</span><textarea rows={1} className="field" value={question} onChange={(e) => setQuestion(e.target.value)} placeholder={t("askPlaceholder")} dir="auto" disabled={!canAsk} /></label><button className="button button-primary" aria-label={t("sendQuestion")} disabled={loading || !canAsk || !question.trim()}><Send size={17} aria-hidden="true" /><span>{t("sendQuestion")}</span></button></div>
         <p className="meta">{t("assistantNote")}</p>
       </form>
     </div>

@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Search } from "lucide-react";
+import { Search, UserRound } from "lucide-react";
 import { apiFetch } from "./apiClient";
 import { useLocale } from "./localeContext";
 import { patientLanguages } from "./translations";
-import { AppointmentStatus, Avatar, EmptyState, MessageHistory, Notice, PageHeading } from "./Ui";
+import { AppointmentStatus, EmptyState, MessageHistory, Notice, PageHeading } from "./Ui";
+
+const initials = (name = "") => name.split(" ").slice(0, 2).map((part) => part[0]).join("").toUpperCase();
 
 export default function Pacientes() {
   const { t, formatDate } = useLocale();
@@ -50,7 +52,7 @@ export default function Pacientes() {
       <PageHeading title={t("patients")} description={t("patientIntro")} />
       <form onSubmit={search} className="search-form">
         <label className="search-input"><span className="field-label">{t("searchName")}</span><Search size={17} aria-hidden="true" />
-          <input className="field" name="patientName" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("searchPlaceholder")} autoComplete="off" />
+          <input className="field" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("searchPlaceholder")} autoComplete="off" />
         </label>
         <button className="button button-primary" disabled={searching || !query.trim()}>{t(searching ? "searching" : "search")}</button>
       </form>
@@ -61,15 +63,15 @@ export default function Pacientes() {
         <div className="patient-grid">
           <section className="panel" aria-label={t("patients")}>
             {patients.map((patient) => (
-              <button key={patient.id} onClick={() => open(patient)} aria-pressed={selected?.id === patient.id} className={`patient-choice${selected?.id === patient.id ? " selected" : ""}`}>
-                <Avatar name={patient.nombre} />
+              <button key={patient.id} onClick={() => open(patient)} className={`patient-choice${selected?.id === patient.id ? " selected" : ""}`}>
+                <span className="avatar" aria-hidden="true">{initials(patient.nombre)}</span>
                 <span className="min-w-0"><span className="block font-semibold truncate">{patient.nombre}</span><span className="block meta truncate">{patient.pais} · <bdi>{patientLanguages[patient.idioma] ?? patient.idioma}</bdi></span></span>
               </button>
             ))}
           </section>
           {!selected ? <section className="panel"><EmptyState>{t("selectPatient")}</EmptyState></section> : (
             <section className="panel">
-              <div className="panel-heading patient-heading"><div className="flex items-center gap-3 min-w-0"><Avatar name={selected.nombre} className="avatar-large" /><div className="min-w-0"><h2 className="break-words">{selected.nombre}</h2><p className="meta">{t("patientRecord")}</p></div></div></div>
+              <div className="panel-heading"><div className="flex items-center gap-3 min-w-0"><UserRound size={20} aria-hidden="true" /><div className="min-w-0"><h2 className="truncate">{selected.nombre}</h2><p className="meta">{t("patientRecord")}</p></div></div></div>
               <dl className="patient-details">
                 <div><dt>{t("language")}</dt><dd><bdi>{patientLanguages[selected.idioma] ?? selected.idioma}</bdi></dd></div>
                 <div><dt>{t("country")}</dt><dd>{selected.pais || "—"}</dd></div>
