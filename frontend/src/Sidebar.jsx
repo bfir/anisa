@@ -68,6 +68,7 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       <Brand />
+      <p className="sidebar-workspace">{t("workspace")}</p>
       <p className="nav-group">{t("management")}</p>
       <nav aria-label={t("management")}><NavigationLinks links={managementLinks} /></nav>
       <p className="nav-group">{t("administration")}</p>
