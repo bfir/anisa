@@ -130,6 +130,11 @@ pip install -r requirements-dev.txt
 python -m scripts.generar_datos
 ```
 
+Para cambiar solo la contraseña de `admin` sin regenerar los datos (usa `ADMIN_PASSWORD` del `.env`):
+```powershell
+python -m scripts.cambiar_password_admin
+```
+
 Arranca la API:
 ```powershell
 uvicorn api.main:app --reload

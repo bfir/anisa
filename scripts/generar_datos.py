@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from api.database import SessionLocal
-from api.models_orm import Cita, Mensaje, Pago, Paciente, Usuario
+from api.models_orm import Auditoria, Cita, Mensaje, Pago, Paciente, Usuario
 
 fake = Faker("es_ES")
 Faker.seed(42)
@@ -25,6 +25,7 @@ CONCEPTOS = ["Primera consulta", "Consulta de seguimiento",
 
 def limpiar_tablas(db):
     """Borra todo lo que hubiera antes, para partir de cero en cada ejecución."""
+    db.query(Auditoria).delete()  # referencia a usuarios: hay que borrarla antes
     db.query(Mensaje).delete()
     db.query(Cita).delete()
     db.query(Pago).delete()
