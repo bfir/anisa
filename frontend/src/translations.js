@@ -28,6 +28,8 @@ export const messages = {
   signInIntro: ["Accede al espacio de trabajo de tu equipo.", "Access your team's workspace.", "ادخل إلى مساحة عمل فريقك."],
   email: ["Correo electrónico", "Email", "البريد الإلكتروني"],
   password: ["Contraseña", "Password", "كلمة المرور"],
+  demoAccess: ["Entrar como demo", "Try the demo", "جرّب النسخة التجريبية"],
+  orSignIn: ["o accede con tu cuenta", "or sign in with your account", "أو سجّل الدخول بحسابك"],
   signingIn: ["Accediendo…", "Signing in…", "جارٍ تسجيل الدخول…"],
   invalidLogin: ["El correo o la contraseña no son correctos.", "The email or password is incorrect.", "البريد الإلكتروني أو كلمة المرور غير صحيحة."],
   loginError: ["No se ha podido conectar. Comprueba tu conexión y vuelve a intentarlo.", "Could not connect. Check your connection and try again.", "تعذر الاتصال. تحقق من اتصالك وحاول مرة أخرى."],

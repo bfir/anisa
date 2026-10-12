@@ -16,6 +16,9 @@ import Ajustes from "./Ajustes";
 import Auditoria from "./Auditoria";
 import Layout from "./Layout";
 
+const DEMO_EMAIL = "coordinador@anisa.dev";
+const DEMO_PASSWORD = "coord123";
+
 function App() {
   const { t } = useLocale();
   const [token, setToken] = useState(getToken());
@@ -24,19 +27,28 @@ function App() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  async function manejarLogin(evento) {
-    evento.preventDefault();
+  async function entrar(correo, clave) {
     if (loading) return;
     setError(null);
     setLoading(true);
     try {
-      await login(email, password);
+      await login(correo, clave);
       setToken(getToken());
     } catch (err) {
       setError(err.status === 401 ? "invalidLogin" : "loginError");
     } finally {
       setLoading(false);
     }
+  }
+
+  function manejarLogin(evento) {
+    evento.preventDefault();
+    entrar(email, password);
+  }
+
+  // Cuenta pública de demostración (rol coordinador): permite probar la demo con un clic.
+  function entrarComoDemo() {
+    entrar(DEMO_EMAIL, DEMO_PASSWORD);
   }
 
   if (!token) return (
@@ -52,6 +64,10 @@ function App() {
           <h2>{t("signIn")}</h2>
           <p className="muted">{t("signInIntro")}</p>
           <div className="login-fields">
+            <button type="button" onClick={entrarComoDemo} disabled={loading} className="button button-primary">
+              {t("demoAccess")}<ArrowRight className="direction-arrow" size={16} aria-hidden="true" />
+            </button>
+            <p className="meta login-divider">{t("orSignIn")}</p>
             <div>
               <label className="field-label" htmlFor="login-email">{t("email")}</label>
               <input id="login-email" type="email" autoComplete="username" required dir="ltr"
@@ -63,7 +79,7 @@ function App() {
                 value={password} onChange={(e) => setPassword(e.target.value)} className="field" />
             </div>
             {error && <Notice>{t(error)}</Notice>}
-            <button type="submit" disabled={loading} className="button button-primary">
+            <button type="submit" disabled={loading} className="button button-secondary">
               {t(loading ? "signingIn" : "signIn")}<ArrowRight className="direction-arrow" size={16} aria-hidden="true" />
             </button>
             {loading && <p role="status" className="meta">{t("coldStart")}</p>}

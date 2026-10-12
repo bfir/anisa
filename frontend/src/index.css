@@ -172,6 +172,7 @@
 .login-form .muted { margin-block: 9px 30px; font-size: 14px; }
 .login-fields { display: grid; gap: 18px; }
 .login-fields .button { width: 100%; }
+.login-divider { text-align: center; margin: 2px 0; }
 
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
   .button:active:not(:disabled):not(:focus-visible) { transform: scale(0.98); }
