@@ -18,10 +18,11 @@ detectar pagos pendientes y preparar y enviar recordatorios en el idioma de cada
 > La API está en el plan gratuito de Render y "duerme" tras un rato de inactividad — la
 > primera petición puede tardar ~50 segundos en responder mientras arranca.
 
-Credenciales de prueba: `admin@anisa.dev` / `admin123` (o `coordinador@anisa.dev` / `coord123`).
+Credenciales de prueba: `coordinador@anisa.dev` / `coord123`.
 
-Ambos roles pueden usar el asistente, enviar mensajes y modificar citas; el registro de
-auditoría es exclusivo de `admin`.
+El rol `coordinador` puede usar el asistente, enviar mensajes y modificar citas. El rol
+`admin` (que además accede al registro de auditoría) no tiene credenciales públicas: su
+contraseña se define con la variable de entorno `ADMIN_PASSWORD` al generar los datos.
 
 ---
 
@@ -114,6 +115,7 @@ GROQ_API_KEY=tu_clave
 SECRET_KEY=una_cadena_aleatoria_larga
 RESEND_API_KEY=tu_clave
 EMAIL_DEMO_DESTINO=tu_email_de_pruebas
+ADMIN_PASSWORD=una_contraseña_segura
 ```
 
 Aplica las migraciones (crea/actualiza las tablas en tu base):

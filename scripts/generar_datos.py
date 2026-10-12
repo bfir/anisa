@@ -1,4 +1,6 @@
+import os
 import random
+import secrets
 from datetime import datetime, timedelta
 
 from faker import Faker
@@ -86,8 +88,14 @@ def crear_pagos(db, paciente_id):
 
 def crear_usuarios_demo(db):
     from api.auth import hash_password
+    # La contraseña de admin NO se publica: se lee de ADMIN_PASSWORD o se genera
+    # una aleatoria y se muestra una sola vez por consola.
+    admin_password = os.getenv("ADMIN_PASSWORD")
+    if not admin_password:
+        admin_password = secrets.token_urlsafe(12)
+        print(f"ADMIN_PASSWORD no definida. Contraseña de admin generada: {admin_password}")
     usuarios = [
-        ("Admin", "admin@anisa.dev", "admin123", "admin"),
+        ("Admin", "admin@anisa.dev", admin_password, "admin"),
         ("Coordinador", "coordinador@anisa.dev", "coord123", "coordinador"),
     ]
     for nombre, email, password, rol in usuarios:
